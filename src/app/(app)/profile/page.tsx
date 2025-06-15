@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription as ShadCNCardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, CheckCircle } from "lucide-react";
@@ -75,7 +76,7 @@ export default function ProfilePage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">Profile Details</CardTitle>
-            <CardDescription>Keep your information current to ensure accurate records.</CardDescription>
+            <ShadCNCardDescription>Keep your information current to ensure accurate records.</ShadCNCardDescription>
           </CardHeader>
           <CardContent className="animate-pulse">
             <div className="space-y-4">
@@ -103,7 +104,7 @@ export default function ProfilePage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="font-headline">Profile Details</CardTitle>
-              <CardDescription>Keep your information current to ensure accurate records.</CardDescription>
+              <ShadCNCardDescription>Keep your information current to ensure accurate records.</ShadCNCardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
