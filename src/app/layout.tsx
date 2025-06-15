@@ -1,7 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import 'katex/dist/katex.min.css'; // Import KaTeX CSS
 
 export const metadata: Metadata = {
   title: 'TeachHub',
