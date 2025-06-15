@@ -68,16 +68,17 @@ Key Points to Cover (elaborate on each extensively, providing significant depth 
 Desired Note Format: {{{noteFormat}}}
 
 **Specific Instructions for Technical Subjects:**
--   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry):**
-    *   Use LaTeX syntax for all mathematical formulas, equations, and expressions (e.g., \`$\\frac{a}{b}$\`, \`$x^2 + y^2 = r^2$\`).
-    *   Provide extremely clear, granular, step-by-step explanations for problem-solving techniques, proofs, or derivations. Assume you are explaining to someone who finds math challenging or is seeing the concept for the very first time.
-    *   **Crucially, explain mathematical concepts in the most human-friendly and intuitive way imaginable. Focus intensely on the 'why' behind formulas and procedures, not just the 'how'.**
-        *   Start with very simple definitions of terms.
-        *   Use simple, relatable language. Avoid jargon unless absolutely necessary, and if so, define it immediately in plain terms. If a simpler word exists, use it.
-        *   Employ analogies, real-world examples, or visual connections whenever possible to make abstract ideas concrete and understandable. For example, when explaining the sum of angles in a polygon like \`(n-2) * 180°\`, you could explain it by relating how a polygon can be divided into \`(n-2)\` triangles, and each triangle has 180°.
-        *   Break down complex ideas into the smallest, most digestible steps. Explicitly connect new concepts to prior, simpler knowledge.
-        *   Include crystal-clear definitions of key terms and theorems, explaining them in everyday language before presenting formal definitions.
-        *   Offer multiple illustrative examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution.
+-   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry, Laplace Transforms, Fourier Series, Differential Equations):**
+    *   **Prioritize Intuitive Understanding Above All Else:** Before presenting complex formulas or procedures, explain the *'why'* and the *'what'*. What problem does this concept solve? What is the core idea in simple terms?
+    *   **Use Analogies and Real-World Connections:** Whenever possible, relate abstract mathematical ideas to concrete, everyday examples or analogies that make them easier to grasp. For instance, explaining Laplace Transforms as a 'problem-solving machine' or a 'language translator'.
+    *   **Start Simple and Build Up:** Introduce terms and concepts in a logical sequence, starting with the most basic definitions. Explain prerequisite knowledge if necessary.
+    *   **Avoid Jargon or Explain it Clearly:** If a technical term is unavoidable, define it immediately in plain language. If a simpler word exists, prefer it.
+    *   **Break Down Complex Formulas and Procedures:** When introducing a formula (e.g., for an integral, a transform, a series), explain what each part of the formula represents conceptually. Don't just present the symbols; explain their meaning and purpose within the formula. For example, for an integral, explain it as 'summing up tiny pieces'.
+    *   **Step-by-Step Explanations:** For problem-solving techniques, proofs, or derivations, provide extremely clear, granular, step-by-step explanations. Assume you are explaining to someone who finds math challenging or is seeing the concept for the very first time. Focus intensely on the reasoning behind each step.
+    *   **Use LaTeX for All Math:** All mathematical formulas, equations, and expressions must use LaTeX syntax (e.g., \`$\\frac{a}{b}$\`, \`$x^2 + y^2 = r^2$\`, \`$\\int_0^\\infty f(t) e^{-st} dt$\`).
+    *   **Illustrative Examples:** Offer multiple examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution.
+    *   **Example for Explaining a Formula (Polygon Angle Sum):** Instead of just stating \`(n-2) * 180°\`, explain it by relating how a polygon can be divided into \`(n-2)\` triangles from one vertex, and each triangle has 180°. Then work through an example like a pentagon.
+
 -   **For Technical Drawing or Engineering Drawing topics (e.g., Orthographic Projection, Isometric Drawing, Dimensioning, CAD basics):**
     *   Provide detailed, easy-to-follow descriptions of visual elements, components, or drawing conventions.
     *   Explain principles (e.g., types of lines, projection methods, sectioning) with utmost clarity, using simple terms and examples.
