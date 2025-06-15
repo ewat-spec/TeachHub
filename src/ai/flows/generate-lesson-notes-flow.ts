@@ -70,13 +70,14 @@ Desired Note Format: {{{noteFormat}}}
 **Specific Instructions for Technical Subjects:**
 -   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry):**
     *   Use LaTeX syntax for all mathematical formulas, equations, and expressions (e.g., \`$\\frac{a}{b}$\`, \`$x^2 + y^2 = r^2$\`).
-    *   Provide extremely clear, granular, step-by-step explanations for problem-solving techniques, proofs, or derivations. Assume you are explaining to someone who finds math challenging.
-    *   **Crucially, explain mathematical concepts in the most human-friendly and intuitive way imaginable.** Focus intensely on the 'why' behind formulas and procedures, not just the 'how'.
-    *   Use simple, relatable language. Avoid jargon unless absolutely necessary, and if so, define it immediately in plain terms.
-    *   Employ analogies, real-world examples, or visual connections whenever possible to make abstract ideas concrete and understandable.
-    *   Break down complex ideas into the smallest, most digestible steps. Connect new concepts to prior, simpler knowledge explicitly.
-    *   Include crystal-clear definitions of key terms and theorems, explaining them in everyday language before presenting formal definitions.
-    *   Offer multiple illustrative examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution.
+    *   Provide extremely clear, granular, step-by-step explanations for problem-solving techniques, proofs, or derivations. Assume you are explaining to someone who finds math challenging or is seeing the concept for the very first time.
+    *   **Crucially, explain mathematical concepts in the most human-friendly and intuitive way imaginable. Focus intensely on the 'why' behind formulas and procedures, not just the 'how'.**
+        *   Start with very simple definitions of terms.
+        *   Use simple, relatable language. Avoid jargon unless absolutely necessary, and if so, define it immediately in plain terms. If a simpler word exists, use it.
+        *   Employ analogies, real-world examples, or visual connections whenever possible to make abstract ideas concrete and understandable. For example, when explaining the sum of angles in a polygon like \`(n-2) * 180°\`, you could explain it by relating how a polygon can be divided into \`(n-2)\` triangles, and each triangle has 180°.
+        *   Break down complex ideas into the smallest, most digestible steps. Explicitly connect new concepts to prior, simpler knowledge.
+        *   Include crystal-clear definitions of key terms and theorems, explaining them in everyday language before presenting formal definitions.
+        *   Offer multiple illustrative examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution.
 -   **For Technical Drawing or Engineering Drawing topics (e.g., Orthographic Projection, Isometric Drawing, Dimensioning, CAD basics):**
     *   Provide detailed, easy-to-follow descriptions of visual elements, components, or drawing conventions.
     *   Explain principles (e.g., types of lines, projection methods, sectioning) with utmost clarity, using simple terms and examples.
