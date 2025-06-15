@@ -1,3 +1,4 @@
+
 // This file needs to be a server component file if it contains server actions.
 // However, since it's just exporting functions that internally might use 'use server',
 // and the main function `suggestLessonPlanElements` from genkit is already designed for server-side execution,
@@ -11,20 +12,35 @@ import {
   type SuggestLessonPlanElementsOutput 
 } from '@/ai/flows/suggest-lesson-plan-elements';
 
+import {
+  generateLessonNotes as genkitGenerateNotes,
+  type GenerateLessonNotesInput,
+  type GenerateLessonNotesOutput
+} from '@/ai/flows/generate-lesson-notes-flow';
+
 export async function getAiSuggestions(input: SuggestLessonPlanElementsInput): Promise<SuggestLessonPlanElementsOutput> {
   try {
-    // Input validation can be done here if needed, or rely on Genkit's Zod schema
     const result = await genkitSuggestElements(input);
     return result;
   } catch (error) {
     console.error("Error getting AI suggestions:", error);
-    // It's good practice to not expose raw error messages to the client
-    // Consider logging the detailed error on the server and returning a generic error message
-    // For this example, re-throwing a simpler error.
     if (error instanceof Error) {
         throw new Error(`Failed to get AI suggestions: ${error.message}`);
     }
     throw new Error("An unknown error occurred while fetching AI suggestions.");
+  }
+}
+
+export async function getAiLessonNotes(input: GenerateLessonNotesInput): Promise<GenerateLessonNotesOutput> {
+  try {
+    const result = await genkitGenerateNotes(input);
+    return result;
+  } catch (error) {
+    console.error("Error generating AI lesson notes:", error);
+    if (error instanceof Error) {
+        throw new Error(`Failed to generate AI lesson notes: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred while generating AI lesson notes.");
   }
 }
 
