@@ -13,63 +13,32 @@ const LatexRenderer: React.FC<LatexRendererProps> = ({ latexString, className })
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (containerRef.current && latexString) {
+    if (containerRef.current && typeof latexString === 'string') { // Check if latexString is a string
       try {
-        // KaTeX expects display mode math to be explicitly passed if using $$..$$
-        // We can replace $$...$$ with \displaymath{...} or pass displayMode: true
-        // For simplicity, we'll try to detect display mode or allow KaTeX to infer.
-        // A more robust solution might pre-process the string to ensure KaTeX delimiters.
-        
-        // KaTeX's auto-render extension is not used here for more direct control.
-        // We'll manually render. KaTeX by default renders based on delimiters like $ and $$.
-        // If the string is purely a block equation like $$...$$, we can use displayMode.
-        
-        let html;
-        // Basic check if the entire string is a display mode equation
-        if (latexString.trim().startsWith('$$') && latexString.trim().endsWith('$$')) {
-          html = katex.renderToString(latexString.trim().slice(2, -2), {
-            throwOnError: false,
-            displayMode: true,
-            output: 'html',
-            macros: {
-              "\\L": "\\mathcal{L}" // Example custom macro if needed
-            }
-          });
-        } else {
-          // For mixed content or inline, KaTeX needs to find delimiters or process segments.
-          // This simplified renderer assumes the string might be multiple equations or mixed text.
-          // A more sophisticated approach would parse the string and render segments.
-          // For now, let's attempt to render the whole string. If it fails, it shows raw.
-          // A common practice is to use a library that handles auto-rendering of mixed content.
-          // Since we're keeping it simple, this might not render mixed text and LaTeX perfectly.
-          // The AI prompt currently favors Markdown with LaTeX blocks.
-          
-          // Let's try to render the string directly. If it's pure LaTeX, it works.
-          // If it's Markdown with LaTeX, this won't process the Markdown part.
-          // This component is best for strings that are *primarily* LaTeX.
-          html = katex.renderToString(latexString, {
-            throwOnError: false, // Don't crash on error, just show raw TeX
-            displayMode: false, // Default to inline, use $$ for display.
-            output: 'html',
-            macros: {
-              "\\L": "\\mathcal{L}"
-            },
-            delimiters: [ // Tell KaTeX what to look for
-                {left: "$$", right: "$$", display: true},
-                {left: "$", right: "$", display: false},
-                {left: "\\(", right: "\\)", display: false},
-                {left: "\\[", right: "\\]", display: true}
-            ]
-          });
-        }
+        const html = katex.renderToString(latexString, {
+          throwOnError: false, // Don't crash on error, KaTeX will display raw TeX for the problematic part
+          output: 'html',    // Ensure output is HTML
+          macros: {
+            "\\L": "\\mathcal{L}" // Custom macro for \L if needed elsewhere
+          },
+          delimiters: [
+              {left: "$$", right: "$$", display: true},    // For display math e.g. $$...$$
+              {left: "$", right: "$", display: false},     // For inline math e.g. $...$
+              {left: "\\(", right: "\\)", display: false}, // For inline math e.g. \(...\)
+              {left: "\\[", right: "\\]", display: true}     // For display math e.g. \[...\]
+          ]
+        });
         containerRef.current.innerHTML = html;
       } catch (error) {
-        console.error('KaTeX rendering error:', error);
-        // Fallback to displaying the raw string if KaTeX fails
+        // This catch block is mainly for unexpected errors if throwOnError was true.
+        // With throwOnError: false, KaTeX internal errors are handled by rendering raw TeX.
+        console.error('KaTeX rendering error (should be rare with throwOnError:false):', error);
+        // Fallback to displaying the raw string if a catastrophic error somehow bypasses KaTeX's internal handling
         containerRef.current.textContent = latexString;
       }
     } else if (containerRef.current) {
-      containerRef.current.textContent = latexString; // Handle empty or null string
+      // Handle cases where latexString is null, undefined, or not a string
+      containerRef.current.textContent = ""; // Clear content or show placeholder
     }
   }, [latexString]);
 
