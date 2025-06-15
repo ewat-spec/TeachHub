@@ -70,10 +70,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )}
                     >
-                      <>
+                      <div>
                         {item.icon}
                         <span>{item.label}</span>
-                      </>
+                      </div>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
