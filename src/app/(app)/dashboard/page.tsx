@@ -1,7 +1,7 @@
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpenText, CalendarDays, UserCircle2, Bell, Briefcase, LayoutGrid } from "lucide-react";
+import { BookOpenText, CalendarDays, UserCircle2, Bell, Briefcase, LayoutGrid, ClipboardList } from "lucide-react";
 
 export default function DashboardPage() {
   const summaryCards = [
@@ -11,6 +11,7 @@ export default function DashboardPage() {
     { title: "Notifications", icon: <Bell className="h-6 w-6 text-primary" />, description: "Check your latest notifications and reminders.", link: "/notifications" },
     { title: "Director Dashboard", icon: <Briefcase className="h-6 w-6 text-primary" />, description: "Access director-specific tools and overviews.", link: "/director-dashboard" },
     { title: "Timetabler Dashboard", icon: <LayoutGrid className="h-6 w-6 text-primary" />, description: "Manage and analyze institution timetables.", link: "/timetabler-dashboard" },
+    { title: "HOD Dashboard", icon: <ClipboardList className="h-6 w-6 text-primary" />, description: "Access tools for Heads of Academic Departments.", link: "/hod-dashboard" },
   ];
 
   return (
@@ -43,14 +44,14 @@ export default function DashboardPage() {
           <p className="text-muted-foreground mb-4">
             Navigate through the sections using the sidebar to access different features of TeachHub.
             You can update your profile, schedule new classes, plan your lessons with AI-powered suggestions,
-            and stay updated with notifications. Directors and Timetablers can access their specialized dashboards.
+            and stay updated with notifications. Directors, Timetablers, and HODs can access their specialized dashboards.
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
             <li><strong>Profile:</strong> Keep your CV, skills, and expertise up-to-date.</li>
             <li><strong>Class Schedule:</strong> View your timetable and class details.</li>
             <li><strong>Lesson Plans:</strong> Develop and submit your teaching materials. Try our AI suggestions!</li>
             <li><strong>Notifications:</strong> Never miss an important update or reminder.</li>
-            <li><strong>Specialized Dashboards:</strong> Access tools tailored for Director or Timetabler roles.</li>
+            <li><strong>Specialized Dashboards:</strong> Access tools tailored for Director, Timetabler, or HOD roles.</li>
           </ul>
         </CardContent>
       </Card>
