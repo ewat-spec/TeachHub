@@ -27,6 +27,7 @@ import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
 import type { GenerateLessonNotesInput, GenerateLessonNotesOutput } from '@/ai/flows/generate-lesson-notes-flow';
+import LatexRenderer from "@/components/common/LatexRenderer";
 
 const lessonPlanFormSchema = z.object({
   id: z.string().optional(),
@@ -357,7 +358,9 @@ export default function LessonPlansPage() {
                                   <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
                               </AccordionTrigger>
                               <AccordionContent className="space-y-3">
-                                  <Textarea value={aiLessonNotes.lessonNotes} readOnly className="min-h-[150px] bg-white" />
+                                  <div className="p-3 border rounded-md bg-white min-h-[150px] prose prose-sm max-w-none overflow-x-auto">
+                                    <LatexRenderer latexString={aiLessonNotes.lessonNotes} />
+                                  </div>
                                   <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
                                       <Copy className="mr-2 h-4 w-4" /> Copy to My Lesson Notes
                                   </Button>
@@ -376,7 +379,7 @@ export default function LessonPlansPage() {
                     <FormItem>
                       <FormLabel className="text-base">My Lesson Notes / Content</FormLabel>
                       <FormControl><Textarea placeholder="Enter your detailed lesson notes, script, or primary content here. You can use AI-generated notes as a starting point by copying them from the section above." {...field} className="min-h-[200px] resize-y text-base" /></FormControl>
-                      <FormDescription>This is your main area for authoring the lesson's content.</FormDescription>
+                      <FormDescription>This is your main area for authoring the lesson's content. You can include LaTeX here too, e.g., $E=mc^2$.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -481,4 +484,3 @@ export default function LessonPlansPage() {
     </div>
   );
 }
-
