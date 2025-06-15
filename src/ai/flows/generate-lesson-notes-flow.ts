@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { askWolframAlpha } from '@/ai/tools/wolframAlphaTool';
 
 const GenerateLessonNotesInputSchema = z.object({
   lessonTopic: z
@@ -27,7 +28,7 @@ const GenerateLessonNotesInputSchema = z.object({
   studentAudience: z
     .string()
     .optional()
-    .describe('A description of the target student audience, e.g., "Second-year electrical engineering students" or "Automotive apprentice mechanics".'),
+    .describe('A description of the target student audience, e.g., "Second-year electrical engineering students" or "Automotive apprentice mechanics". This helps tailor examples and depth.'),
 });
 
 export type GenerateLessonNotesInput = z.infer<
@@ -52,6 +53,7 @@ export async function generateLessonNotes(
 
 const prompt = ai.definePrompt({
   name: 'generateLessonNotesPrompt',
+  tools: [askWolframAlpha],
   input: {schema: GenerateLessonNotesInputSchema},
   output: {schema: GenerateLessonNotesOutputSchema},
   prompt: `You are an expert AI assistant tasked with creating **exceptionally comprehensive, detailed, technically accurate, and profoundly human-friendly** lesson notes for trainers.
@@ -63,6 +65,7 @@ Lesson Topic: {{{lessonTopic}}}
 {{#if studentAudience}}
 Student Audience: {{{studentAudience}}}
 **Crucially, tailor all explanations, examples, analogies, and the depth of discussion to be highly relevant, relatable, and appropriate for this specific student audience.** For instance, if explaining a physics concept to automotive students, use automotive examples. If explaining mathematics to electrical engineering students, use circuit or signal processing examples.
+If the student audience is not specified, assume a general technical audience (e.g., first-year college students in a technical field or vocational training).
 {{/if}}
 
 {{#if keyPoints}}
@@ -74,22 +77,28 @@ Key Points to Cover (elaborate on each extensively, providing significant depth 
 (No specific key points provided. Please identify and elaborate on the most important key points for the given lesson topic, ensuring significant depth, clarity, and relevance to the specified student audience.)
 {{/if}}
 
-Desired Note Format: {{{noteFormat}}}
+Desired NoteFormat: {{{noteFormat}}}
+
+**General Instructions for Explanations (ESPECIALLY for technical and mathematical content):**
+1.  **Start with the 'Why' and 'What':** Before diving into details or formulas, always explain the core concept in simple terms. Why is this topic important for the {{{studentAudience}}}? What problem does it solve for them? What is the main idea in plain language?
+2.  **Use Analogies:** For abstract concepts, use relatable analogies tailored to the {{{studentAudience}}}. For example, explaining electricity flow using water in pipes, or complex data structures using everyday organizational systems.
+3.  **Define Terms Clearly:** If a technical term or jargon is unavoidable, define it immediately in simple, clear language. If a simpler word or phrasing exists that conveys the same meaning accurately, prefer it.
+4.  **Build from Simple to Complex:** Introduce concepts in a logical sequence. Start with foundational ideas and gradually build up to more complex aspects. Don't assume too much prior knowledge beyond what is typical for the {{{studentAudience}}}.
+5.  **Step-by-Step for Processes:** For procedures, problem-solving techniques, or derivations, provide extremely clear, granular, step-by-step explanations. Explain the reasoning behind *each step*.
+6.  **Illustrative Examples:** Provide concrete examples that demonstrate the concept. These examples should be relevant to the {{{studentAudience}}}'s field of study or common experiences. Work through examples fully.
+7.  **Human-Friendly Tone:** Write as if you are a patient, knowledgeable, and enthusiastic teacher explaining this to someone eager to learn. Avoid overly dry or academic language where a more conversational or descriptive style would be clearer.
 
 **Specific Instructions for Technical Subjects (always tailor to {{{studentAudience}}})**
 -   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry, Laplace Transforms, Fourier Series, Differential Equations):**
     *   **PRIORITIZE INTUITIVE UNDERSTANDING FOR THE SPECIFIED AUDIENCE ABOVE ALL ELSE.** Before presenting any complex formula or mathematical procedure, you *must* first explain the *'why'* (the purpose, the problem it solves *for them*) and the *'what'* (the core idea) in simple, relatable terms. Use analogies and real-world examples appropriate for the {{{studentAudience}}}. For abstract concepts like integrals, transforms (e.g., Laplace, Fourier), series, or limits, start with a clear, simple analogy or a real-world scenario that makes the concept tangible *for that audience*.
-    *   **USE AUDIENCE-SPECIFIC ANALOGIES AND REAL-WORLD CONNECTIONS EXTENSIVELY.**
-        *   Example for Laplace Transform for **Electrical Engineering students**: "Think of the Laplace Transform as a special toolkit. Your complicated circuit problem, which involves how voltages and currents change over time (often described by tricky differential equations), gets 'transformed' into a new language where it becomes a simpler algebra problem (the 's-domain'). It's like changing a difficult puzzle into an easier one. After you solve it in this simpler language, you transform it back to see how your circuit behaves in real time, especially with capacitors and inductors."
-        *   Example for Laplace Transform for **Mechanical/Automotive Engineering students**: "Imagine analyzing how a car's suspension (a spring-damper system) reacts to a bump. The math describing this vibration over time can be complex (differential equations). The Laplace Transform is like a converter that changes this tricky time-based problem into a more manageable algebraic form (the 's-domain'), helping us understand stability and response more easily. Then we convert it back to see the actual motion."
+        *   **Laplace Transform Example Intuition (General):** Think of the Laplace Transform as a special toolkit or a language translator. It takes a complicated problem that changes over time (often described by tricky differential equations) and 'transforms' it into a new 'language' (the 's-domain') where it becomes a much simpler algebra problem. After you solve it in this simpler language, you transform it back to see how your system behaves in real time.
+        *   If {{{studentAudience}}} is "Electrical Engineering students," explain Laplace using RLC circuits or signal analysis. For instance, "it helps analyze how voltages and currents in circuits with capacitors and inductors behave, especially when things are switched on or off."
+        *   If {{{studentAudience}}} is "Mechanical/Automotive Engineering students," explain Laplace using spring-damper systems (like car suspensions) or vibrations. For instance, "it helps us understand how a car's suspension reacts to a bump by changing a complex vibration problem into simpler algebra."
     *   **EXPLAIN THE PURPOSE FIRST (for the {{{studentAudience}}}):** For any mathematical tool, transformation, or formula, clearly state what problem it helps *them* solve or what insight it provides *before* showing the formula itself.
-    *   **DECONSTRUCT FORMULAS (for the {{{studentAudience}}}):** When a formula is introduced (e.g., for an integral, a transform like $F(s) = \\int_0^\\infty f(t) e^{-st} dt$, a series), explain *each part* of the formula conceptually, in plain language relevant to their field. For the Laplace integral: explain what $f(t)$ represents (e.g., a time-varying voltage, a mechanical displacement for *their* systems), what $e^{-st}$ represents (a decaying exponential 'weighting' or 'testing' function, where $s$ is a complex frequency related to system characteristics), what the integral symbol $\\int$ itself means (summing up an infinite number of tiny pieces), and what $F(s)$ (the result) signifies (a representation of $f(t)$ in the 's-domain' or frequency domain, which might simplify analysis of system stability or frequency response for *their* specific systems).
-    *   **START SIMPLE AND BUILD UP (for the {{{studentAudience}}}):** Introduce terms and concepts in a logical sequence, beginning with the most basic definitions. Clearly explain any prerequisite knowledge if necessary, assuming the typical background of the {{{studentAudience}}}.
-    *   **AVOID UNNECESSARY JARGON (for the {{{studentAudience}}}):** If a technical term is unavoidable, define it immediately in plain language. If a simpler word or phrasing exists, prefer it.
-    *   **STEP-BY-STEP EXPLANATIONS (for the {{{studentAudience}}}):** For problem-solving techniques, proofs, or derivations, provide extremely clear, granular, step-by-step explanations. Focus intensely on the reasoning behind each step, tailored to their likely understanding.
-    *   **USE LATEX FOR ALL MATH:** **ALL** mathematical formulas, equations, expressions, individual variables (e.g., $x$, $y$, $s$, $t$), and symbols (e.g., $\\alpha$, $\\beta$, $\\int$, $\\sum$) **MUST** use LaTeX syntax. For inline math, use $...$. For display/block math, use $$...$$. Example: $F(s) = \\mathcal{L} \\{f(t)\\} = \\int_0^{\\infty} f(t)e^{-st} dt$. Another example: $$a^2 + b^2 = c^2$$.
+    *   **DECONSTRUCT FORMULAS (for the {{{studentAudience}}}):** When a formula is introduced (e.g., for an integral like $\\int_0^\\infty f(t) e^{-st} dt$, a transform, a series), explain *each part* of the formula conceptually, in plain language relevant to their field. For the Laplace integral: explain what $f(t)$ represents (e.g., a time-varying voltage, a mechanical displacement for *their* systems), what $e^{-st}$ represents (a decaying exponential 'weighting' or 'testing' function, where $s$ is a complex frequency related to system characteristics), what the integral symbol $\\int$ itself means (summing up an infinite number of tiny pieces), and what $F(s)$ (the result) signifies (a representation of $f(t)$ in the 's-domain' or frequency domain, which might simplify analysis of system stability or frequency response for *their* specific systems).
+    *   **USE LATEX FOR ALL MATH:** **ALL** mathematical formulas, equations, expressions, individual variables (e.g., $x$, $y$, $s$, $t$), and symbols (e.g., $\\alpha$, $\\beta$, $\\int$, $\\sum$) **MUST** use LaTeX syntax. For inline math, use $...$. For display/block math, use $$...$$. Example: $F(s) = \\mathcal{L} \\{f(t)\\} = \\int_0^{\\infty} f(t)e^{-st} dt$. Another example for a polygon's angle sum: $(n-2) \\times 180^{\\circ}$.
     *   **ILLUSTRATIVE EXAMPLES (for the {{{studentAudience}}}):** Offer multiple examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution, using scenarios familiar to the {{{studentAudience}}}.
-    *   **Example for Explaining a Formula (Polygon Angle Sum - adapt if relevant to audience):** Instead of just stating $(n-2) * 180°$, first explain *why* by relating how any polygon can be divided into $(n-2)$ triangles from one vertex, and each triangle contains $180°$. Work through an example like a pentagon: $n=5$, so $(5-2) = 3$ triangles, thus $3 \\times 180° = 540°$. If this isn't directly relevant to {{{studentAudience}}}, focus on more pertinent mathematical concepts.
+    *   **Wolfram Alpha Tool Usage**: If you need to perform a specific calculation, verify a formula, get properties of a mathematical function, obtain a step-by-step solution for an equation, or generate data for a plot to include in the explanation, consider using the 'askWolframAlpha' tool. Phrase your query to the tool clearly (e.g., "derivative of x^3 * sin(x)", "solve x^2 + 5x + 6 = 0 for x", "plot y = x^2 from x = -5 to 5"). Incorporate the tool's textual output meaningfully into your explanation. If the tool provides a placeholder message indicating it's not fully implemented, acknowledge this briefly if it makes sense in the flow of explanation, or simply proceed with your best general explanation.
 
 -   **For Technical Drawing or Engineering Drawing topics (e.g., Orthographic Projection, Isometric Drawing, Dimensioning, CAD basics - always tailor to {{{studentAudience}}}):**
     *   Provide detailed, easy-to-follow descriptions of visual elements, components, or drawing conventions, explaining their purpose *within the context of the {{{studentAudience}}}'s field* (e.g., explain dimensioning rules with examples of mechanical parts for mechanical students, or circuit board layouts for electrical students if applicable).
@@ -118,11 +127,10 @@ const generateLessonNotesFlow = ai.defineFlow(
     const processedInput = {
         ...input,
         keyPoints: input.keyPoints?.filter(kp => kp.trim() !== "").length > 0 ? input.keyPoints.filter(kp => kp.trim() !== "") : undefined,
-        studentAudience: input.studentAudience?.trim() ? input.studentAudience.trim() : undefined,
+        studentAudience: input.studentAudience?.trim() ? input.studentAudience.trim() : "a general technical audience (e.g., first-year college students or vocational trainees)",
     };
 
     const {output} = await prompt(processedInput);
     return output!;
   }
 );
-
