@@ -22,16 +22,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy } from "lucide-react";
+import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
-import type { GenerateLessonNotesOutput } from "@/ai/flows/generate-lesson-notes-flow";
+import type { GenerateLessonNotesInput, GenerateLessonNotesOutput } from '@/ai/flows/generate-lesson-notes-flow';
 
 const lessonPlanFormSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   topic: z.string().min(3, { message: "Topic must be at least 3 characters." }),
+  studentAudience: z.string().optional().describe("Description of the target student audience"),
   keyPointsForNotes: z.string().optional().describe("Comma-separated key points for AI note generation"),
   noteFormat: z.enum(["summary", "detailed-paragraph", "bullet-points"]).optional().default("detailed-paragraph"),
   lessonNotesContent: z.string().optional().describe("Detailed lesson notes for the trainer."),
@@ -48,8 +49,8 @@ interface LessonPlan extends LessonPlanFormValues {
 }
 
 const initialLessonPlans: LessonPlan[] = [
-  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
-  { id: "lp2", title: "Project Management Basics", topic: "Project Management", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
+  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
+  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
 ];
 
 export default function LessonPlansPage() {
@@ -72,7 +73,7 @@ export default function LessonPlansPage() {
 
   const form = useForm<LessonPlanFormValues>({
     resolver: zodResolver(lessonPlanFormSchema),
-    defaultValues: { title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
+    defaultValues: { title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
     mode: "onChange",
   });
 
@@ -83,7 +84,7 @@ export default function LessonPlansPage() {
       setAiSuggestions(null); 
       setAiLessonNotes(null);
     } else {
-      form.reset({ title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+      form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     }
   }, [editingPlan, form]);
 
@@ -133,6 +134,7 @@ export default function LessonPlansPage() {
     const topic = form.getValues("topic");
     const keyPointsStr = form.getValues("keyPointsForNotes");
     const noteFormat = form.getValues("noteFormat");
+    const studentAudience = form.getValues("studentAudience");
 
     if (!topic || topic.trim().length < 3) {
       form.setError("topic", { type: "manual", message: "Please enter a valid topic (at least 3 characters) to generate notes." });
@@ -142,13 +144,19 @@ export default function LessonPlansPage() {
     setAiLessonNotes(null);
     try {
       const keyPointsArray = keyPointsStr ? keyPointsStr.split(',').map(kp => kp.trim()).filter(kp => kp.length > 0) : undefined;
-      const notes = await getAiLessonNotes({ 
+      
+      const notesInput: GenerateLessonNotesInput = {
         lessonTopic: topic,
         keyPoints: keyPointsArray,
-        noteFormat: noteFormat || "detailed-paragraph" 
-      });
+        noteFormat: noteFormat || "detailed-paragraph",
+      };
+      if (studentAudience && studentAudience.trim().length > 0) {
+        notesInput.studentAudience = studentAudience.trim();
+      }
+
+      const notes = await getAiLessonNotes(notesInput);
       setAiLessonNotes(notes);
-      toast({ title: "AI Lesson Notes Ready", description: "Notes generated for your lesson plan topic." });
+      toast({ title: "AI Lesson Notes Ready", description: "Notes generated and tailored for your lesson plan." });
     } catch (error) {
       toast({ title: "AI Notes Error", description: error instanceof Error ? error.message : "Could not generate AI lesson notes.", variant: "destructive" });
     } finally {
@@ -159,7 +167,7 @@ export default function LessonPlansPage() {
   const handleCopyAiNotesToForm = () => {
     if (aiLessonNotes?.lessonNotes) {
       form.setValue("lessonNotesContent", aiLessonNotes.lessonNotes, { shouldValidate: true, shouldDirty: true });
-      toast({ title: "Notes Copied", description: "AI-generated notes have been copied to the 'Lesson Notes / Content' field." });
+      toast({ title: "Notes Copied", description: "AI-generated notes have been copied to the 'My Lesson Notes / Content' field." });
     }
   };
   
@@ -185,7 +193,7 @@ export default function LessonPlansPage() {
     setEditingPlan(null);
     setAiSuggestions(null);
     setAiLessonNotes(null);
-    form.reset({ title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+    form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     setIsFormOpen(true);
   }
 
@@ -247,6 +255,18 @@ export default function LessonPlansPage() {
                       <FormLabel>Lesson Topic</FormLabel>
                        <FormControl><Input placeholder="e.g., Quantum Entanglement" {...field} /></FormControl>
                       <FormDescription>This topic will be used for AI assistance below.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="studentAudience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" /> Student Audience (Optional)</FormLabel>
+                       <FormControl><Input placeholder="e.g., 2nd year Electrical Eng. students, Automotive apprentices" {...field} /></FormControl>
+                      <FormDescription>Describing the audience helps the AI tailor examples and explanations.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -429,7 +449,7 @@ export default function LessonPlansPage() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Topic</TableHead>
-                  <TableHead className="hidden md:table-cell">Objectives</TableHead>
+                  <TableHead className="hidden md:table-cell">Audience</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -438,7 +458,7 @@ export default function LessonPlansPage() {
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">{plan.title}</TableCell>
                     <TableCell>{plan.topic}</TableCell>
-                    <TableCell className="hidden md:table-cell truncate max-w-xs">{plan.objectives}</TableCell>
+                    <TableCell className="hidden md:table-cell truncate max-w-xs">{plan.studentAudience || "N/A"}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(plan)} className="mr-2 hover:text-primary">
                         <Edit className="h-4 w-4" />
