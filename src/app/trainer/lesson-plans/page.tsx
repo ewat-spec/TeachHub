@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote } from "lucide-react";
+import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
@@ -32,12 +32,13 @@ const lessonPlanFormSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   topic: z.string().min(3, { message: "Topic must be at least 3 characters." }),
+  keyPointsForNotes: z.string().optional().describe("Comma-separated key points for AI note generation"),
+  noteFormat: z.enum(["summary", "detailed-paragraph", "bullet-points"]).optional().default("detailed-paragraph"),
+  lessonNotesContent: z.string().optional().describe("Detailed lesson notes for the trainer."),
   objectives: z.string().min(10, { message: "Learning objectives must be at least 10 characters." }),
   activities: z.string().min(10, { message: "Activities description must be at least 10 characters." }),
   materials: z.string().optional(),
   assessment: z.string().optional(),
-  keyPointsForNotes: z.string().optional().describe("Comma-separated key points for AI note generation"),
-  noteFormat: z.enum(["summary", "detailed-paragraph", "bullet-points"]).optional().default("detailed-paragraph"),
 });
 
 type LessonPlanFormValues = z.infer<typeof lessonPlanFormSchema>;
@@ -47,8 +48,8 @@ interface LessonPlan extends LessonPlanFormValues {
 }
 
 const initialLessonPlans: LessonPlan[] = [
-  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points" },
-  { id: "lp2", title: "Project Management Basics", topic: "Project Management", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph" },
+  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
+  { id: "lp2", title: "Project Management Basics", topic: "Project Management", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
 ];
 
 export default function LessonPlansPage() {
@@ -71,7 +72,7 @@ export default function LessonPlansPage() {
 
   const form = useForm<LessonPlanFormValues>({
     resolver: zodResolver(lessonPlanFormSchema),
-    defaultValues: { title: "", topic: "", objectives: "", activities: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph" },
+    defaultValues: { title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
     mode: "onChange",
   });
 
@@ -82,7 +83,7 @@ export default function LessonPlansPage() {
       setAiSuggestions(null); 
       setAiLessonNotes(null);
     } else {
-      form.reset({ title: "", topic: "", objectives: "", activities: "", materials: "", assessment: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph" });
+      form.reset({ title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     }
   }, [editingPlan, form]);
 
@@ -154,6 +155,13 @@ export default function LessonPlansPage() {
       setIsLoadingAiLessonNotes(false);
     }
   };
+
+  const handleCopyAiNotesToForm = () => {
+    if (aiLessonNotes?.lessonNotes) {
+      form.setValue("lessonNotesContent", aiLessonNotes.lessonNotes, { shouldValidate: true, shouldDirty: true });
+      toast({ title: "Notes Copied", description: "AI-generated notes have been copied to the 'Lesson Notes / Content' field." });
+    }
+  };
   
   const handleEdit = (plan: LessonPlan) => {
     setEditingPlan(plan);
@@ -177,7 +185,7 @@ export default function LessonPlansPage() {
     setEditingPlan(null);
     setAiSuggestions(null);
     setAiLessonNotes(null);
-    form.reset({ title: "", topic: "", objectives: "", activities: "", materials: "", assessment: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph" });
+    form.reset({ title: "", topic: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     setIsFormOpen(true);
   }
 
@@ -238,114 +246,128 @@ export default function LessonPlansPage() {
                     <FormItem>
                       <FormLabel>Lesson Topic</FormLabel>
                        <FormControl><Input placeholder="e.g., Quantum Entanglement" {...field} /></FormControl>
-                      <FormDescription>Enter a topic to get AI-powered content suggestions and notes.</FormDescription>
+                      <FormDescription>This topic will be used for AI assistance below.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                <div className="space-y-2">
-                    <FormLabel>AI Assistance for Topic: {form.getValues("topic") || "(Enter topic above)"}</FormLabel>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" onClick={handleFetchAiSuggestions} disabled={isLoadingAiSuggestions || !form.watch("topic")} variant="outline" className="shrink-0">
-                            {isLoadingAiSuggestions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-accent" />}
-                            Suggest Elements
-                        </Button>
-                        <Button type="button" onClick={handleFetchAiLessonNotes} disabled={isLoadingAiLessonNotes || !form.watch("topic")} variant="outline" className="shrink-0">
-                            {isLoadingAiLessonNotes ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <StickyNote className="mr-2 h-4 w-4 text-accent" />}
-                            Generate Notes
-                        </Button>
-                    </div>
-                </div>
-
-                {(aiSuggestions || aiLessonNotes) && (
-                  <Accordion type="multiple" className="w-full" defaultValue={['ai-elements']}>
-                    {aiSuggestions && (
-                      <>
-                        <AccordionItem value="ai-elements">
-                          <AccordionTrigger className="text-primary hover:text-primary/80">
-                            <ListChecks className="mr-2 h-5 w-5" /> Suggested Lesson Elements
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            {aiSuggestions.suggestedElements.length > 0 ? (
-                              <ul className="list-disc space-y-2 pl-6 text-sm text-muted-foreground">
-                                {aiSuggestions.suggestedElements.map((el, idx) => <li key={`el-${idx}`}>{el}</li>)}
-                              </ul>
-                            ) : <p className="text-sm text-muted-foreground">No specific elements suggested. Try a broader topic.</p>}
-                          </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="ai-resources">
-                          <AccordionTrigger className="text-primary hover:text-primary/80">
-                            <Lightbulb className="mr-2 h-5 w-5" /> Additional Resources
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            {aiSuggestions.additionalResources.length > 0 ? (
-                              <ul className="list-disc space-y-2 pl-6 text-sm text-muted-foreground">
-                                {aiSuggestions.additionalResources.map((res, idx) => <li key={`res-${idx}`}>{res}</li>)}
-                              </ul>
-                            ) : <p className="text-sm text-muted-foreground">No additional resources suggested.</p>}
-                          </AccordionContent>
-                        </AccordionItem>
-                      </>
+                {/* AI Assistance Section */}
+                <Card className="bg-muted/30 p-4 space-y-4">
+                  <h3 className="text-lg font-medium text-primary">AI Assistance Tools</h3>
+                  <FormField
+                    control={form.control}
+                    name="keyPointsForNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Key Points for AI Notes (Optional)</FormLabel>
+                        <FormControl><Textarea placeholder="Enter comma-separated key points, e.g., point 1, sub-topic A, important detail" {...field} className="min-h-[80px] resize-y bg-background" /></FormControl>
+                        <FormDescription>Help the AI focus the generated notes.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    {aiLessonNotes && (
-                        <AccordionItem value="ai-notes">
+                  />
+                  <FormField
+                    control={form.control}
+                    name="noteFormat"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Desired AI Note Format (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Select note format" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="detailed-paragraph">Detailed Paragraphs</SelectItem>
+                            <SelectItem value="bullet-points">Bullet Points</SelectItem>
+                            <SelectItem value="summary">Summary</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Choose how the AI should structure the notes.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" onClick={handleFetchAiSuggestions} disabled={isLoadingAiSuggestions || !form.watch("topic")} variant="outline" className="shrink-0">
+                          {isLoadingAiSuggestions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-accent" />}
+                          Suggest Elements
+                      </Button>
+                      <Button type="button" onClick={handleFetchAiLessonNotes} disabled={isLoadingAiLessonNotes || !form.watch("topic")} variant="outline" className="shrink-0">
+                          {isLoadingAiLessonNotes ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <StickyNote className="mr-2 h-4 w-4 text-accent" />}
+                          Generate Notes
+                      </Button>
+                  </div>
+
+                  {(aiSuggestions || aiLessonNotes) && (
+                    <Accordion type="multiple" className="w-full" defaultValue={aiLessonNotes ? ['ai-notes'] : (aiSuggestions ? ['ai-elements'] : []) }>
+                      {aiSuggestions && (
+                        <>
+                          <AccordionItem value="ai-elements">
                             <AccordionTrigger className="text-primary hover:text-primary/80">
-                                <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes
+                              <ListChecks className="mr-2 h-5 w-5" /> Suggested Lesson Elements
                             </AccordionTrigger>
                             <AccordionContent>
-                                <Textarea value={aiLessonNotes.lessonNotes} readOnly className="min-h-[200px] bg-muted/50" />
+                              {aiSuggestions.suggestedElements.length > 0 ? (
+                                <ul className="list-disc space-y-2 pl-6 text-sm text-muted-foreground">
+                                  {aiSuggestions.suggestedElements.map((el, idx) => <li key={`el-${idx}`}>{el}</li>)}
+                                </ul>
+                              ) : <p className="text-sm text-muted-foreground">No specific elements suggested. Try a broader topic.</p>}
                             </AccordionContent>
-                        </AccordionItem>
-                    )}
-                  </Accordion>
-                )}
+                          </AccordionItem>
+                          <AccordionItem value="ai-resources">
+                            <AccordionTrigger className="text-primary hover:text-primary/80">
+                              <Lightbulb className="mr-2 h-5 w-5" /> Additional Resources
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              {aiSuggestions.additionalResources.length > 0 ? (
+                                <ul className="list-disc space-y-2 pl-6 text-sm text-muted-foreground">
+                                  {aiSuggestions.additionalResources.map((res, idx) => <li key={`res-${idx}`}>{res}</li>)}
+                                </ul>
+                              ) : <p className="text-sm text-muted-foreground">No additional resources suggested.</p>}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </>
+                      )}
+                      {aiLessonNotes && (
+                          <AccordionItem value="ai-notes">
+                              <AccordionTrigger className="text-primary hover:text-primary/80">
+                                  <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
+                              </AccordionTrigger>
+                              <AccordionContent className="space-y-3">
+                                  <Textarea value={aiLessonNotes.lessonNotes} readOnly className="min-h-[150px] bg-white" />
+                                  <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
+                                      <Copy className="mr-2 h-4 w-4" /> Copy to My Lesson Notes
+                                  </Button>
+                              </AccordionContent>
+                          </AccordionItem>
+                      )}
+                    </Accordion>
+                  )}
+                </Card>
                 
+                {/* Main Content Section */}
                 <FormField
                   control={form.control}
-                  name="keyPointsForNotes"
+                  name="lessonNotesContent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Key Points for AI Notes (Optional)</FormLabel>
-                      <FormControl><Textarea placeholder="Enter comma-separated key points, e.g., point 1, sub-topic A, important detail" {...field} className="min-h-[80px] resize-y" /></FormControl>
-                      <FormDescription>Help the AI focus the generated notes.</FormDescription>
+                      <FormLabel className="text-base">My Lesson Notes / Content</FormLabel>
+                      <FormControl><Textarea placeholder="Enter your detailed lesson notes, script, or primary content here. You can use AI-generated notes as a starting point by copying them from the section above." {...field} className="min-h-[200px] resize-y text-base" /></FormControl>
+                      <FormDescription>This is your main area for authoring the lesson's content.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="noteFormat"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Desired AI Note Format (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select note format" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="detailed-paragraph">Detailed Paragraphs</SelectItem>
-                          <SelectItem value="bullet-points">Bullet Points</SelectItem>
-                          <SelectItem value="summary">Summary</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Choose how the AI should structure the notes.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-
                 <FormField
                   control={form.control}
                   name="objectives"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Learning Objectives</FormLabel>
-                      <FormControl><Textarea placeholder="What will learners achieve?" {...field} className="min-h-[100px] resize-y" /></FormControl>
+                      <FormControl><Textarea placeholder="What will learners achieve by the end of this lesson?" {...field} className="min-h-[100px] resize-y" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -356,7 +378,8 @@ export default function LessonPlansPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Activities &amp; Content Outline</FormLabel>
-                      <FormControl><Textarea placeholder="Describe the activities, content flow..." {...field} className="min-h-[120px] resize-y" /></FormControl>
+                      <FormControl><Textarea placeholder="Briefly describe the sequence of activities, discussions, or content flow." {...field} className="min-h-[120px] resize-y" /></FormControl>
+                       <FormDescription>This is a summary or outline of activities, while detailed content goes into 'My Lesson Notes / Content'.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -368,7 +391,7 @@ export default function LessonPlansPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Materials / Resources</FormLabel>
-                        <FormControl><Textarea placeholder="List any materials needed (e.g., slides, videos, articles)" {...field} className="min-h-[80px] resize-y"/></FormControl>
+                        <FormControl><Textarea placeholder="List any materials needed (e.g., slides, videos, articles, handouts, equipment)" {...field} className="min-h-[80px] resize-y"/></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -379,7 +402,7 @@ export default function LessonPlansPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Assessment Methods</FormLabel>
-                        <FormControl><Textarea placeholder="How will learning be assessed? (e.g., quiz, project, observation)" {...field} className="min-h-[80px] resize-y"/></FormControl>
+                        <FormControl><Textarea placeholder="How will learning be assessed? (e.g., quiz, project, observation, Q&A)" {...field} className="min-h-[80px] resize-y"/></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -438,3 +461,4 @@ export default function LessonPlansPage() {
     </div>
   );
 }
+
