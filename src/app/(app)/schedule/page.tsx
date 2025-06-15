@@ -457,67 +457,83 @@ export default function SchedulePage() {
                 <Accordion type="multiple" defaultValue={['assessment', 'clashes']} className="w-full">
                     <AccordionItem value="assessment">
                         <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary">
+                            <div className="flex items-center text-primary font-semibold">
                                 <BarChart3 className="mr-2 h-5 w-5" /> Overall Assessment
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                            <p className="text-base">{aiAnalysisResult.overallAssessment}</p>
+                            <p className="text-base text-muted-foreground">{aiAnalysisResult.overallAssessment}</p>
                         </AccordionContent>
                     </AccordionItem>
 
-                    {aiAnalysisResult.identifiedClashes.length > 0 && (
-                        <AccordionItem value="clashes">
-                            <AccordionTrigger className="text-lg hover:no-underline">
-                                <div className="flex items-center text-destructive">
-                                 <AlertOctagon className="mr-2 h-5 w-5" /> Identified Clashes ({aiAnalysisResult.identifiedClashes.length})
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="space-y-3">
-                                {aiAnalysisResult.identifiedClashes.map((clash, index) => (
-                                    <div key={`clash-${index}`} className="p-3 border rounded-md bg-destructive/10">
-                                        <p className="font-semibold text-destructive-foreground">{clash.description}</p>
-                                        <p className="text-sm text-muted-foreground">Conflicting: {clash.conflictingItems.join(', ')}</p>
-                                        <ul className="list-disc list-inside pl-4 text-sm">
-                                            {clash.involvedClasses.map((cls, clsIdx) => (
-                                                <li key={`clash-detail-${index}-${clsIdx}`}>{cls.topic} on {cls.day} at {cls.time}</li>
-                                            ))}
-                                        </ul>
+                    <AccordionItem value="clashes">
+                        <AccordionTrigger className="text-lg hover:no-underline">
+                            <div className={cn("flex items-center font-semibold", aiAnalysisResult.identifiedClashes.length > 0 ? "text-destructive" : "text-green-600")}>
+                                <AlertOctagon className="mr-2 h-5 w-5" /> Identified Clashes ({aiAnalysisResult.identifiedClashes.length})
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-3">
+                            {aiAnalysisResult.identifiedClashes.length > 0 ? (
+                                aiAnalysisResult.identifiedClashes.map((clash, index) => (
+                                    <div key={`clash-${index}`} className="p-4 border border-destructive/50 rounded-md bg-destructive/10 shadow">
+                                        <h4 className="font-semibold text-destructive flex items-center"><AlertOctagon className="mr-2 h-5 w-5" /> {clash.description}</h4>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            <span className="font-medium">Conflicting:</span> {clash.conflictingItems.join(', ')}
+                                        </p>
+                                        {clash.involvedClasses.length > 0 && (
+                                            <div className="mt-2">
+                                                <p className="text-sm font-medium">Involved Classes:</p>
+                                                <ul className="list-disc list-inside pl-4 text-sm text-muted-foreground">
+                                                    {clash.involvedClasses.map((cls, clsIdx) => (
+                                                        <li key={`clash-detail-${index}-${clsIdx}`}>
+                                                            {cls.topic} on {cls.day} at {cls.time}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
-                            </AccordionContent>
-                        </AccordionItem>
-                    )}
+                                ))
+                            ) : (
+                                <div className="flex items-center text-green-600">
+                                    <CheckCircle className="mr-2 h-5 w-5" />
+                                    <p>No clashes identified. Well done!</p>
+                                </div>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                    
                      <AccordionItem value="time-allocation">
                         <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary">
+                            <div className="flex items-center text-primary font-semibold">
                              <ListChecks className="mr-2 h-5 w-5" /> Time Allocation Feedback
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
                             {aiAnalysisResult.timeAllocationFeedback.length > 0 ? (
-                                <ul className="list-disc space-y-2 pl-5">
+                                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
                                     {aiAnalysisResult.timeAllocationFeedback.map((feedback, index) => (
                                         <li key={`timealloc-${index}`}>{feedback}</li>
                                     ))}
                                 </ul>
-                            ) : <p>No specific time allocation feedback provided by AI.</p>}
+                            ) : <p className="text-muted-foreground">No specific time allocation feedback provided by AI.</p>}
                         </AccordionContent>
                     </AccordionItem>
+
                     <AccordionItem value="suggestions">
                         <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary">
+                            <div className="flex items-center text-primary font-semibold">
                                 <Lightbulb className="mr-2 h-5 w-5" /> General Suggestions
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
                              {aiAnalysisResult.generalSuggestions.length > 0 ? (
-                                <ul className="list-disc space-y-2 pl-5">
+                                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
                                     {aiAnalysisResult.generalSuggestions.map((suggestion, index) => (
                                         <li key={`gensuggest-${index}`}>{suggestion}</li>
                                     ))}
                                 </ul>
-                            ) : <p>No general suggestions provided by AI.</p>}
+                            ) : <p className="text-muted-foreground">No general suggestions provided by AI.</p>}
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
@@ -527,3 +543,4 @@ export default function SchedulePage() {
     </div>
   );
 }
+
