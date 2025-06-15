@@ -14,12 +14,14 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  useSidebar, // Import useSidebar
 } from "@/components/ui/sidebar";
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, Settings } from "lucide-react";
+import { SheetTitle } from "@/components/ui/sheet";
 
 interface NavItem {
   href: string;
@@ -36,6 +38,20 @@ const navItems: NavItem[] = [
   { href: "/notifications", icon: <Bell />, label: "Notifications", tooltip: "Notifications & Reminders" },
 ];
 
+// New component to conditionally render the title
+function AppSpecificSidebarTitle() {
+  const { isMobile } = useSidebar();
+
+  const titleElement = (
+    <h1 className="text-xl font-headline font-semibold group-data-[collapsible=icon]:hidden">TeachHub</h1>
+  );
+
+  if (isMobile) {
+    return <SheetTitle asChild>{titleElement}</SheetTitle>;
+  }
+  return titleElement;
+}
+
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
@@ -46,7 +62,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="flex items-center gap-2 text-sidebar-primary hover:text-sidebar-primary/80 transition-colors">
               <TeachHubLogo className="h-8 w-8" />
-              <h1 className="text-xl font-headline font-semibold group-data-[collapsible=icon]:hidden">TeachHub</h1>
+              <AppSpecificSidebarTitle /> {/* Use the conditional title component */}
             </Link>
             <div className="ml-auto group-data-[collapsible=icon]:hidden">
                <SidebarTrigger />
