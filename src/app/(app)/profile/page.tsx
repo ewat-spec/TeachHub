@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +24,7 @@ import { useState, useEffect } from "react";
 const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }).max(100),
   email: z.string().email({ message: "Please enter a valid email address." }),
+  department: z.string().optional(),
   cv: z.string().min(10, { message: "CV summary must be at least 10 characters." }).optional(),
   skills: z.string().min(5, { message: "Skills must be at least 5 characters." }).optional(),
   expertise: z.string().min(5, { message: "Areas of expertise must be at least 5 characters." }).optional(),
@@ -34,6 +36,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 const defaultValues: Partial<ProfileFormValues> = {
   fullName: "Jane Doe",
   email: "jane.doe@example.com",
+  department: "Academic Department Placeholder",
   cv: "Experienced corporate trainer with 10+ years in leadership development and soft skills training. Proven ability to design and deliver engaging workshops.",
   skills: "Curriculum Design, Public Speaking, Workshop Facilitation, E-learning Development, Coaching",
   expertise: "Leadership, Communication, Team Building, Conflict Resolution, Time Management",
@@ -125,6 +128,20 @@ export default function ProfilePage() {
                     <FormControl>
                       <Input type="email" placeholder="Enter your email" {...field} readOnly />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your department" {...field} />
+                    </FormControl>
+                     <FormDescription>The department you belong to or report to.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
