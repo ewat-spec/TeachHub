@@ -15,8 +15,8 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto">
       <PageHeader
-        title="Welcome to TeachHub"
-        description="Your central hub for managing training activities and resources."
+        title="Trainer Dashboard"
+        description="Your personal hub for managing training activities and resources."
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid for new card */}
         {summaryCards.map((card) => (
@@ -55,3 +55,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
