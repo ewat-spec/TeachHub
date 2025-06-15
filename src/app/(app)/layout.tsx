@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -57,7 +58,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <SidebarMenu className="p-2">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} legacyBehavior passHref>
+                  <Link href={item.href}>
                     <SidebarMenuButton
                       asChild
                       isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
@@ -69,10 +70,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )}
                     >
-                      <a>
+                      <>
                         {item.icon}
                         <span>{item.label}</span>
-                      </a>
+                      </>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
