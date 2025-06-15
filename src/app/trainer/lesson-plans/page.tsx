@@ -358,7 +358,7 @@ export default function LessonPlansPage() {
                                   <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
                               </AccordionTrigger>
                               <AccordionContent className="space-y-3">
-                                  <div className="p-3 border rounded-md bg-white min-h-[150px] prose prose-sm max-w-none overflow-x-auto">
+                                  <div className="p-3 border rounded-md bg-white min-h-[150px] max-w-none overflow-x-auto">
                                     <LatexRenderer latexString={aiLessonNotes.lessonNotes} />
                                   </div>
                                   <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
