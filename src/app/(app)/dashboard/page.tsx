@@ -1,6 +1,7 @@
+
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpenText, CalendarDays, UserCircle2, Bell } from "lucide-react";
+import { BookOpenText, CalendarDays, UserCircle2, Bell, Briefcase } from "lucide-react";
 
 export default function DashboardPage() {
   const summaryCards = [
@@ -8,6 +9,7 @@ export default function DashboardPage() {
     { title: "Upcoming Classes", icon: <CalendarDays className="h-6 w-6 text-primary" />, description: "View and manage your scheduled classes.", link: "/schedule" },
     { title: "Lesson Plans", icon: <BookOpenText className="h-6 w-6 text-primary" />, description: "Create, view, and update your lesson plans.", link: "/lesson-plans" },
     { title: "Notifications", icon: <Bell className="h-6 w-6 text-primary" />, description: "Check your latest notifications and reminders.", link: "/notifications" },
+    { title: "Director Dashboard", icon: <Briefcase className="h-6 w-6 text-primary" />, description: "Access director-specific tools and overviews.", link: "/director-dashboard" },
   ];
 
   return (
@@ -16,7 +18,7 @@ export default function DashboardPage() {
         title="Welcome to TeachHub"
         description="Your central hub for managing training activities and resources."
       />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid for new card */}
         {summaryCards.map((card) => (
           <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
