@@ -14,7 +14,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,18 +23,15 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, Brain, ListChecks, AlertOctagon, Lightbulb, BarChart3, Loader2, Sparkles } from "lucide-react";
+import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getAiTimetableAnalysis } from "./actions";
-import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
-
+// AI Analysis related imports are removed as the feature is moved.
 
 const scheduleFormSchema = z.object({
   id: z.string().optional(),
@@ -57,17 +53,15 @@ const mockTrainers = [
   { id: "trainer1", name: "John Smith" },
   { id: "trainer2", name: "Alice Johnson" },
   { id: "trainer3", name: "Robert Brown" },
+  // Assuming current user is Jane Doe, add her to the list for "My Schedule"
+  { id: "trainerJane", name: "Jane Doe" }, 
 ];
 
 const initialScheduledClasses: ScheduledClass[] = [
-  { id: "class1", trainer: "trainer1", sessionDate: new Date("2024-09-15"), sessionTime: "10:00", venue: "Room A101", topic: "Introduction to React", duration: 2 },
+  { id: "class1", trainer: "trainerJane", sessionDate: new Date("2024-09-15"), sessionTime: "10:00", venue: "Room A101", topic: "Introduction to React", duration: 2 },
   { id: "class2", trainer: "trainer2", sessionDate: new Date("2024-09-16"), sessionTime: "14:00", venue: "Online Webinar", topic: "Advanced CSS Techniques", duration: 1.5 },
+  { id: "class3", trainer: "trainerJane", sessionDate: new Date("2024-09-17"), sessionTime: "09:00", venue: "Room B203", topic: "State Management in React", duration: 3 },
 ];
-
-const curriculumFormSchema = z.object({
-  guidelines: z.string().min(10, { message: "Please provide some curriculum guidelines for analysis."}),
-});
-type CurriculumFormValues = z.infer<typeof curriculumFormSchema>;
 
 
 export default function SchedulePage() {
@@ -77,8 +71,7 @@ export default function SchedulePage() {
   const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
   const [isClient, setIsClient] = useState(false);
   
-  const [aiAnalysisResult, setAiAnalysisResult] = useState<AnalyzeTimetableOutput | null>(null);
-  const [isLoadingAiAnalysis, setIsLoadingAiAnalysis] = useState(false);
+  // AI Analysis state and form are removed.
 
   useEffect(() => {
     setIsClient(true);
@@ -87,21 +80,13 @@ export default function SchedulePage() {
   const scheduleUiForm = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
-      trainer: "",
+      trainer: "trainerJane", // Default to current trainer
       sessionTime: "09:00",
       venue: "",
       topic: "",
       duration: 1,
     },
     mode: "onChange",
-  });
-
-  const curriculumUiForm = useForm<CurriculumFormValues>({
-    resolver: zodResolver(curriculumFormSchema),
-    defaultValues: {
-      guidelines: "E.g., Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes.",
-    },
-     mode: "onChange",
   });
 
   useEffect(() => {
@@ -113,7 +98,7 @@ export default function SchedulePage() {
       setIsFormOpen(true);
     } else {
       scheduleUiForm.reset({
-        trainer: "",
+        trainer: "trainerJane", // Default to current trainer
         sessionDate: undefined,
         sessionTime: "09:00",
         venue: "",
@@ -150,7 +135,7 @@ export default function SchedulePage() {
   const openNewForm = () => {
     setEditingClass(null);
     scheduleUiForm.reset({
-      trainer: "",
+      trainer: "trainerJane", // Default to current trainer
       sessionDate: undefined,
       sessionTime: "09:00",
       venue: "",
@@ -160,45 +145,12 @@ export default function SchedulePage() {
     setIsFormOpen(true);
   }
 
-  const handleAnalyzeTimetable = async (data: CurriculumFormValues) => {
-    if (scheduledClasses.length === 0) {
-      toast({ title: "No Classes", description: "Please add some classes to the schedule before analyzing.", variant: "destructive" });
-      return;
-    }
-    setIsLoadingAiAnalysis(true);
-    setAiAnalysisResult(null);
-
-    const classesForAnalysis: AnalyzeTimetableInput['scheduledClasses'] = scheduledClasses.map(sc => {
-        const trainer = mockTrainers.find(t => t.id === sc.trainer);
-        return {
-            topic: sc.topic,
-            trainerName: trainer ? trainer.name : 'Unknown Trainer',
-            dayOfWeek: format(new Date(sc.sessionDate), "EEEE"), 
-            startTime: sc.sessionTime,
-            durationHours: sc.duration,
-            venue: sc.venue,
-        };
-    });
-
-    try {
-      const analysis = await getAiTimetableAnalysis({
-        curriculumGuidelines: data.guidelines,
-        scheduledClasses: classesForAnalysis,
-      });
-      setAiAnalysisResult(analysis);
-      toast({ title: "AI Analysis Complete", description: "Timetable analysis is ready to view.", action: <Sparkles className="text-green-500" />});
-    } catch (error) {
-      toast({ title: "AI Analysis Error", description: error instanceof Error ? error.message : "Could not perform timetable analysis.", variant: "destructive" });
-    } finally {
-      setIsLoadingAiAnalysis(false);
-    }
-  };
-
+  // handleAnalyzeTimetable function removed.
 
   if (!isClient) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Class Scheduling" description="Allocate trainers to sessions and manage the schedule." />
+        <PageHeader title="My Class Schedule" description="Manage your personal class schedule." />
          <div className="animate-pulse">
             <div className="h-10 bg-muted rounded w-40 mb-4"></div>
             <Card className="shadow-lg">
@@ -218,7 +170,7 @@ export default function SchedulePage() {
     <div className="space-y-6">
       <PageHeader
         title="My Class Schedule"
-        description="Allocate trainers to sessions, manage your schedule, and get AI timetable analysis."
+        description="Manage your personal class schedule and session details."
         actions={
           <Button onClick={openNewForm}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Session
@@ -230,7 +182,7 @@ export default function SchedulePage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">{editingClass ? "Edit Session" : "Schedule New Session"}</CardTitle>
-            <CardDescription>{editingClass ? "Update details for this session." : "Fill in the details to add a new session to the schedule."}</CardDescription>
+            <CardDescription>{editingClass ? "Update details for this session." : "Fill in the details to add a new session to your schedule."}</CardDescription>
           </CardHeader>
           <Form {...scheduleUiForm}>
             <form onSubmit={scheduleUiForm.handleSubmit(onSubmit)}>
@@ -250,7 +202,9 @@ export default function SchedulePage() {
                           </FormControl>
                           <SelectContent>
                             {mockTrainers.map(trainer => (
-                              <SelectItem key={trainer.id} value={trainer.id}>{trainer.name}</SelectItem>
+                              <SelectItem key={trainer.id} value={trainer.id} disabled={trainer.id !== "trainerJane" && editingClass?.trainer !== trainer.id && !editingClass}>
+                                {trainer.name} {trainer.id === "trainerJane" && "(Me)"}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -368,15 +322,14 @@ export default function SchedulePage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-headline">My Current Schedule</CardTitle>
+          <CardTitle className="font-headline">My Current Classes</CardTitle>
         </CardHeader>
         <CardContent>
-          {scheduledClasses.length > 0 ? (
+          {scheduledClasses.filter(cls => cls.trainer === 'trainerJane').length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Topic</TableHead>
-                  <TableHead>Trainer</TableHead>
                   <TableHead>Date &amp; Time</TableHead>
                   <TableHead>Venue</TableHead>
                   <TableHead>Duration</TableHead>
@@ -384,10 +337,12 @@ export default function SchedulePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {scheduledClasses.sort((a,b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime() || a.sessionTime.localeCompare(b.sessionTime)).map((cls) => (
+                {scheduledClasses
+                  .filter(cls => cls.trainer === 'trainerJane') // Show only logged-in trainer's classes
+                  .sort((a,b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime() || a.sessionTime.localeCompare(b.sessionTime))
+                  .map((cls) => (
                   <TableRow key={cls.id}>
                     <TableCell className="font-medium">{cls.topic}</TableCell>
-                    <TableCell>{mockTrainers.find(t => t.id === cls.trainer)?.name || 'N/A'}</TableCell>
                     <TableCell>{format(new Date(cls.sessionDate), "MMM dd, yyyy")} at {cls.sessionTime}</TableCell>
                     <TableCell>{cls.venue}</TableCell>
                     <TableCell>{cls.duration} hr(s)</TableCell>
@@ -406,140 +361,15 @@ export default function SchedulePage() {
               </TableBody>
             </Table>
           ) : (
-             <p className="text-muted-foreground text-center py-8">No classes scheduled yet. Click "Add New Session" to get started.</p>
+             <p className="text-muted-foreground text-center py-8">You have no classes scheduled yet. Click "Add New Session" to get started.</p>
           )}
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-            <CardTitle className="font-headline flex items-center"><Brain className="mr-2 h-6 w-6 text-primary" /> AI Timetable Analysis</CardTitle>
-            <CardDescription>Get AI-powered feedback on your current schedule based on curriculum guidelines.</CardDescription>
-        </CardHeader>
-        <Form {...curriculumUiForm}>
-            <form onSubmit={curriculumUiForm.handleSubmit(handleAnalyzeTimetable)}>
-                <CardContent className="space-y-4">
-                     <FormField
-                        control={curriculumUiForm.control}
-                        name="guidelines"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Curriculum Guidelines & Notes</FormLabel>
-                            <FormControl>
-                                <Textarea
-                                placeholder="Describe subject priorities, required hours, preferred times, constraints, etc."
-                                className="min-h-[100px] resize-y"
-                                {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <Button type="submit" disabled={isLoadingAiAnalysis || scheduledClasses.length === 0}>
-                        {isLoadingAiAnalysis ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Analyze Schedule with AI
-                    </Button>
-                    {scheduledClasses.length === 0 && <p className="text-sm text-destructive">Add some classes to the schedule to enable analysis.</p>}
-                </CardContent>
-            </form>
-        </Form>
-        {isLoadingAiAnalysis && (
-            <CardContent>
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Analyzing timetable, please wait...</span>
-                </div>
-            </CardContent>
-        )}
-        {aiAnalysisResult && !isLoadingAiAnalysis && (
-            <CardContent className="space-y-6 pt-4">
-                <Accordion type="multiple" defaultValue={['assessment', 'clashes']} className="w-full">
-                    <AccordionItem value="assessment">
-                        <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary font-semibold">
-                                <BarChart3 className="mr-2 h-5 w-5" /> Overall Assessment
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <p className="text-base text-muted-foreground">{aiAnalysisResult.overallAssessment}</p>
-                        </AccordionContent>
-                    </AccordionItem>
+      {/* AI Timetable Analysis Card and Form removed from here */}
 
-                    <AccordionItem value="clashes">
-                        <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className={cn("flex items-center font-semibold", aiAnalysisResult.identifiedClashes.length > 0 ? "text-destructive" : "text-green-600")}>
-                                <AlertOctagon className="mr-2 h-5 w-5" /> Identified Clashes ({aiAnalysisResult.identifiedClashes.length})
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="space-y-3">
-                            {aiAnalysisResult.identifiedClashes.length > 0 ? (
-                                aiAnalysisResult.identifiedClashes.map((clash, index) => (
-                                    <div key={`clash-${index}`} className="p-4 border border-destructive/50 rounded-md bg-destructive/10 shadow">
-                                        <h4 className="font-semibold text-destructive flex items-center"><AlertOctagon className="mr-2 h-5 w-5" /> {clash.description}</h4>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            <span className="font-medium">Conflicting:</span> {clash.conflictingItems.join(', ')}
-                                        </p>
-                                        {clash.involvedClasses.length > 0 && (
-                                            <div className="mt-2">
-                                                <p className="text-sm font-medium">Involved Classes:</p>
-                                                <ul className="list-disc list-inside pl-4 text-sm text-muted-foreground">
-                                                    {clash.involvedClasses.map((cls, clsIdx) => (
-                                                        <li key={`clash-detail-${index}-${clsIdx}`}>
-                                                            {cls.topic} on {cls.day} at {cls.time}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="flex items-center text-green-600">
-                                    <CheckCircle className="mr-2 h-5 w-5" />
-                                    <p>No clashes identified. Well done!</p>
-                                </div>
-                            )}
-                        </AccordionContent>
-                    </AccordionItem>
-                    
-                     <AccordionItem value="time-allocation">
-                        <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary font-semibold">
-                             <ListChecks className="mr-2 h-5 w-5" /> Time Allocation Feedback
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            {aiAnalysisResult.timeAllocationFeedback.length > 0 ? (
-                                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                                    {aiAnalysisResult.timeAllocationFeedback.map((feedback, index) => (
-                                        <li key={`timealloc-${index}`}>{feedback}</li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-muted-foreground">No specific time allocation feedback provided by AI.</p>}
-                        </AccordionContent>
-                    </AccordionItem>
-
-                    <AccordionItem value="suggestions">
-                        <AccordionTrigger className="text-lg hover:no-underline">
-                            <div className="flex items-center text-primary font-semibold">
-                                <Lightbulb className="mr-2 h-5 w-5" /> General Suggestions
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                             {aiAnalysisResult.generalSuggestions.length > 0 ? (
-                                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                                    {aiAnalysisResult.generalSuggestions.map((suggestion, index) => (
-                                        <li key={`gensuggest-${index}`}>{suggestion}</li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-muted-foreground">No general suggestions provided by AI.</p>}
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </CardContent>
-        )}
-      </Card>
     </div>
   );
 }
+
+    
