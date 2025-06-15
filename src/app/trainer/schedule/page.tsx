@@ -31,7 +31,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-// AI Analysis related imports are removed as the feature is moved.
 
 const scheduleFormSchema = z.object({
   id: z.string().optional(),
@@ -49,18 +48,21 @@ interface ScheduledClass extends ScheduleFormValues {
   id: string; 
 }
 
+// Mock for the current logged-in trainer (Jane Doe)
+const CURRENT_TRAINER_ID = "trainerJane";
+const CURRENT_TRAINER_NAME = "Jane Doe";
+
 const mockTrainers = [
   { id: "trainer1", name: "John Smith" },
   { id: "trainer2", name: "Alice Johnson" },
   { id: "trainer3", name: "Robert Brown" },
-  // Assuming current user is Jane Doe, add her to the list for "My Schedule"
-  { id: "trainerJane", name: "Jane Doe" }, 
+  { id: CURRENT_TRAINER_ID, name: CURRENT_TRAINER_NAME }, 
 ];
 
+// Initial classes only for the current trainer (Jane Doe)
 const initialScheduledClasses: ScheduledClass[] = [
-  { id: "class1", trainer: "trainerJane", sessionDate: new Date("2024-09-15"), sessionTime: "10:00", venue: "Room A101", topic: "Introduction to React", duration: 2 },
-  { id: "class2", trainer: "trainer2", sessionDate: new Date("2024-09-16"), sessionTime: "14:00", venue: "Online Webinar", topic: "Advanced CSS Techniques", duration: 1.5 },
-  { id: "class3", trainer: "trainerJane", sessionDate: new Date("2024-09-17"), sessionTime: "09:00", venue: "Room B203", topic: "State Management in React", duration: 3 },
+  { id: "class1", trainer: CURRENT_TRAINER_ID, sessionDate: new Date("2024-09-15"), sessionTime: "10:00", venue: "Room A101", topic: "Introduction to React", duration: 2 },
+  { id: "class3", trainer: CURRENT_TRAINER_ID, sessionDate: new Date("2024-09-17"), sessionTime: "09:00", venue: "Room B203", topic: "State Management in React", duration: 3 },
 ];
 
 
@@ -71,8 +73,6 @@ export default function SchedulePage() {
   const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
   const [isClient, setIsClient] = useState(false);
   
-  // AI Analysis state and form are removed.
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -80,7 +80,7 @@ export default function SchedulePage() {
   const scheduleUiForm = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
-      trainer: "trainerJane", // Default to current trainer
+      trainer: CURRENT_TRAINER_ID, // Default to current trainer
       sessionTime: "09:00",
       venue: "",
       topic: "",
@@ -98,7 +98,7 @@ export default function SchedulePage() {
       setIsFormOpen(true);
     } else {
       scheduleUiForm.reset({
-        trainer: "trainerJane", // Default to current trainer
+        trainer: CURRENT_TRAINER_ID, 
         sessionDate: undefined,
         sessionTime: "09:00",
         venue: "",
@@ -110,13 +110,19 @@ export default function SchedulePage() {
 
 
   async function onSubmit(data: ScheduleFormValues) {
+    // Ensure the trainer field is set to the current trainer if it's a new class or editing their own class
+    const submissionData = {
+        ...data,
+        trainer: CURRENT_TRAINER_ID, // Force trainer to be current user for their schedule page
+    };
+
     await new Promise(resolve => setTimeout(resolve, 500)); 
     if (editingClass) {
-      setScheduledClasses(scheduledClasses.map(cls => cls.id === editingClass.id ? { ...data, id: editingClass.id } as ScheduledClass : cls));
-      toast({ title: "Class Updated", description: `Session on "${data.topic}" has been updated.`, action: <CheckCircle className="text-green-500"/> });
+      setScheduledClasses(scheduledClasses.map(cls => cls.id === editingClass.id ? { ...submissionData, id: editingClass.id } as ScheduledClass : cls));
+      toast({ title: "Class Updated", description: `Session on "${submissionData.topic}" has been updated.`, action: <CheckCircle className="text-green-500"/> });
     } else {
-      setScheduledClasses([...scheduledClasses, { ...data, id: `class${Date.now()}` } as ScheduledClass]);
-      toast({ title: "Class Scheduled", description: `New session on "${data.topic}" has been added.`, action: <CheckCircle className="text-green-500"/> });
+      setScheduledClasses([...scheduledClasses, { ...submissionData, id: `class${Date.now()}` } as ScheduledClass]);
+      toast({ title: "Class Scheduled", description: `New session on "${submissionData.topic}" has been added.`, action: <CheckCircle className="text-green-500"/> });
     }
     setEditingClass(null);
     setIsFormOpen(false);
@@ -135,7 +141,7 @@ export default function SchedulePage() {
   const openNewForm = () => {
     setEditingClass(null);
     scheduleUiForm.reset({
-      trainer: "trainerJane", // Default to current trainer
+      trainer: CURRENT_TRAINER_ID, 
       sessionDate: undefined,
       sessionTime: "09:00",
       venue: "",
@@ -144,8 +150,6 @@ export default function SchedulePage() {
     });
     setIsFormOpen(true);
   }
-
-  // handleAnalyzeTimetable function removed.
 
   if (!isClient) {
     return (
@@ -194,18 +198,29 @@ export default function SchedulePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Trainer</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value} 
+                            defaultValue={CURRENT_TRAINER_ID}
+                            disabled // Trainers manage their own schedule, so this is non-editable.
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a trainer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockTrainers.map(trainer => (
-                              <SelectItem key={trainer.id} value={trainer.id} disabled={trainer.id !== "trainerJane" && editingClass?.trainer !== trainer.id && !editingClass}>
-                                {trainer.name} {trainer.id === "trainerJane" && "(Me)"}
+                            {/* Show only the current trainer as an option, or all if needed for other logic but keep disabled */}
+                            <SelectItem value={CURRENT_TRAINER_ID}>
+                                {CURRENT_TRAINER_NAME} (Me)
+                            </SelectItem>
+                            {/* Optionally, list other trainers if there's a need to see them, but keep selection disabled for this form context
+                            {mockTrainers.filter(t => t.id !== CURRENT_TRAINER_ID).map(trainer => (
+                              <SelectItem key={trainer.id} value={trainer.id} disabled>
+                                {trainer.name}
                               </SelectItem>
                             ))}
+                            */}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -325,7 +340,7 @@ export default function SchedulePage() {
           <CardTitle className="font-headline">My Current Classes</CardTitle>
         </CardHeader>
         <CardContent>
-          {scheduledClasses.filter(cls => cls.trainer === 'trainerJane').length > 0 ? (
+          {scheduledClasses.filter(cls => cls.trainer === CURRENT_TRAINER_ID).length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -338,7 +353,7 @@ export default function SchedulePage() {
               </TableHeader>
               <TableBody>
                 {scheduledClasses
-                  .filter(cls => cls.trainer === 'trainerJane') // Show only logged-in trainer's classes
+                  .filter(cls => cls.trainer === CURRENT_TRAINER_ID) 
                   .sort((a,b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime() || a.sessionTime.localeCompare(b.sessionTime))
                   .map((cls) => (
                   <TableRow key={cls.id}>
@@ -365,9 +380,6 @@ export default function SchedulePage() {
           )}
         </CardContent>
       </Card>
-
-      {/* AI Timetable Analysis Card and Form removed from here */}
-
     </div>
   );
 }
