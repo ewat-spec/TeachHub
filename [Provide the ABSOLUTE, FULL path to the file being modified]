@@ -1,0 +1,4 @@
+Provide the ENTIRE, FINAL, intended content of the file here. ...]]></content>`**:
+            *   This is the most critical part. It means I must provide the **complete and final version of the entire file** as it should look *after* the changes are made.
+            *   **"Do NOT provide diffs or partial snippets"**: I don't just show the lines that changed. I provide the whole file's content from the first line to the last.
+            *   **`<![CDATA[...]]>`**: This is a special XML tag. It means "character data." Anything I put inside `<![CDATA[...
