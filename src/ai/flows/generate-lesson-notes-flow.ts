@@ -50,23 +50,29 @@ const prompt = ai.definePrompt({
   name: 'generateLessonNotesPrompt',
   input: {schema: GenerateLessonNotesInputSchema},
   output: {schema: GenerateLessonNotesOutputSchema},
-  prompt: `You are an AI assistant designed to help trainers prepare comprehensive lesson notes.
-Based on the lesson topic, key points (if provided), and desired format specified, generate clear and informative lesson notes.
-The notes should be well-structured and suitable for a trainer to use for teaching or as a handout.
-Format the output as Markdown.
+  prompt: `You are an expert AI assistant tasked with creating **comprehensive and detailed** lesson notes for trainers.
+Your goal is to produce notes that are thorough, informative, and directly usable for teaching or as a detailed handout.
+The output must be in Markdown format.
 
 Lesson Topic: {{{lessonTopic}}}
 
 {{#if keyPoints}}
-Key Points to Cover:
+Key Points to Cover (elaborate on each extensively):
 {{#each keyPoints}}
 - {{{this}}}
 {{/each}}
+{{else}}
+(No specific key points provided. Please identify and elaborate on the most important key points for the given lesson topic.)
 {{/if}}
 
 Desired Note Format: {{{noteFormat}}}
 
-Generate the lesson notes now.
+Please generate the lesson notes now. Ensure the content is rich and covers the topic and key points in significant depth.
+- If 'detailed-paragraph' format is requested, provide in-depth paragraphs with explanations, examples, and context.
+- If 'bullet-points' format is requested, create a structured list of detailed bullet points, possibly with sub-bullets, covering concepts, definitions, examples, and steps where applicable.
+- If 'summary' format is requested, provide a comprehensive summary that still captures the main essence and critical details of the topic.
+
+Avoid superficial or overly brief content. Aim for notes that a trainer can rely on for a substantial lesson.
 `,
 });
 
@@ -91,3 +97,4 @@ const generateLessonNotesFlow = ai.defineFlow(
     return output!;
   }
 );
+
