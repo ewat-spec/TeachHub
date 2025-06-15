@@ -1,7 +1,8 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,14 +24,18 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, Brain, ListChecks, AlertOctagon, Lightbulb, BarChart3, Loader2, Sparkles } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getAiTimetableAnalysis } from "./actions";
+import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
+
 
 const scheduleFormSchema = z.object({
   id: z.string().optional(), // For editing
@@ -44,7 +50,7 @@ const scheduleFormSchema = z.object({
 type ScheduleFormValues = z.infer<typeof scheduleFormSchema>;
 
 interface ScheduledClass extends ScheduleFormValues {
-  id: string; // Ensure ID is always present for scheduled items
+  id: string; 
 }
 
 const mockTrainers = [
@@ -58,18 +64,27 @@ const initialScheduledClasses: ScheduledClass[] = [
   { id: "class2", trainer: "trainer2", sessionDate: new Date("2024-09-16"), sessionTime: "14:00", venue: "Online Webinar", topic: "Advanced CSS Techniques", duration: 1.5 },
 ];
 
+const curriculumFormSchema = z.object({
+  guidelines: z.string().min(10, { message: "Please provide some curriculum guidelines for analysis."}),
+});
+type CurriculumFormValues = z.infer<typeof curriculumFormSchema>;
+
+
 export default function SchedulePage() {
   const { toast } = useToast();
   const [scheduledClasses, setScheduledClasses] = useState<ScheduledClass[]>(initialScheduledClasses);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
   const [isClient, setIsClient] = useState(false);
+  
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<AnalyzeTimetableOutput | null>(null);
+  const [isLoadingAiAnalysis, setIsLoadingAiAnalysis] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const form = useForm<ScheduleFormValues>({
+  const scheduleUiForm = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
       trainer: "",
@@ -81,15 +96,23 @@ export default function SchedulePage() {
     mode: "onChange",
   });
 
+  const curriculumUiForm = useForm<CurriculumFormValues>({
+    resolver: zodResolver(curriculumFormSchema),
+    defaultValues: {
+      guidelines: "E.g., Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes.",
+    },
+     mode: "onChange",
+  });
+
   useEffect(() => {
     if (editingClass) {
-      form.reset({
+      scheduleUiForm.reset({
         ...editingClass,
-        sessionDate: new Date(editingClass.sessionDate) // Ensure date is a Date object
+        sessionDate: new Date(editingClass.sessionDate) 
       });
       setIsFormOpen(true);
     } else {
-      form.reset({
+      scheduleUiForm.reset({
         trainer: "",
         sessionDate: undefined,
         sessionTime: "09:00",
@@ -98,11 +121,11 @@ export default function SchedulePage() {
         duration: 1,
       });
     }
-  }, [editingClass, form]);
+  }, [editingClass, scheduleUiForm]);
 
 
   async function onSubmit(data: ScheduleFormValues) {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500)); 
     if (editingClass) {
       setScheduledClasses(scheduledClasses.map(cls => cls.id === editingClass.id ? { ...data, id: editingClass.id } as ScheduledClass : cls));
       toast({ title: "Class Updated", description: `Session on "${data.topic}" has been updated.`, action: <CheckCircle className="text-green-500"/> });
@@ -112,7 +135,7 @@ export default function SchedulePage() {
     }
     setEditingClass(null);
     setIsFormOpen(false);
-    form.reset();
+    scheduleUiForm.reset();
   }
 
   const handleEdit = (cls: ScheduledClass) => {
@@ -120,14 +143,13 @@ export default function SchedulePage() {
   };
 
   const handleDelete = (classId: string) => {
-    // Simulate API call
     setScheduledClasses(scheduledClasses.filter(cls => cls.id !== classId));
     toast({ title: "Class Deleted", description: "The session has been removed from the schedule.", variant: "destructive" });
   };
   
   const openNewForm = () => {
     setEditingClass(null);
-    form.reset({
+    scheduleUiForm.reset({
       trainer: "",
       sessionDate: undefined,
       sessionTime: "09:00",
@@ -137,6 +159,41 @@ export default function SchedulePage() {
     });
     setIsFormOpen(true);
   }
+
+  const handleAnalyzeTimetable = async (data: CurriculumFormValues) => {
+    if (scheduledClasses.length === 0) {
+      toast({ title: "No Classes", description: "Please add some classes to the schedule before analyzing.", variant: "destructive" });
+      return;
+    }
+    setIsLoadingAiAnalysis(true);
+    setAiAnalysisResult(null);
+
+    const classesForAnalysis: AnalyzeTimetableInput['scheduledClasses'] = scheduledClasses.map(sc => {
+        const trainer = mockTrainers.find(t => t.id === sc.trainer);
+        return {
+            topic: sc.topic,
+            trainerName: trainer ? trainer.name : 'Unknown Trainer',
+            dayOfWeek: format(new Date(sc.sessionDate), "EEEE"), // e.g., Monday
+            startTime: sc.sessionTime,
+            durationHours: sc.duration,
+            venue: sc.venue,
+        };
+    });
+
+    try {
+      const analysis = await getAiTimetableAnalysis({
+        curriculumGuidelines: data.guidelines,
+        scheduledClasses: classesForAnalysis,
+      });
+      setAiAnalysisResult(analysis);
+      toast({ title: "AI Analysis Complete", description: "Timetable analysis is ready to view.", action: <Sparkles className="text-green-500" />});
+    } catch (error) {
+      toast({ title: "AI Analysis Error", description: error instanceof Error ? error.message : "Could not perform timetable analysis.", variant: "destructive" });
+    } finally {
+      setIsLoadingAiAnalysis(false);
+    }
+  };
+
 
   if (!isClient) {
     return (
@@ -175,12 +232,12 @@ export default function SchedulePage() {
             <CardTitle className="font-headline">{editingClass ? "Edit Session" : "Schedule New Session"}</CardTitle>
             <CardDescription>{editingClass ? "Update details for this session." : "Fill in the details to add a new session to the schedule."}</CardDescription>
           </CardHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Form {...scheduleUiForm}>
+            <form onSubmit={scheduleUiForm.handleSubmit(onSubmit)}>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="trainer"
                     render={({ field }) => (
                       <FormItem>
@@ -202,7 +259,7 @@ export default function SchedulePage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="topic"
                     render={({ field }) => (
                       <FormItem>
@@ -217,7 +274,7 @@ export default function SchedulePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="sessionDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
@@ -247,7 +304,7 @@ export default function SchedulePage() {
                               selected={field.value}
                               onSelect={field.onChange}
                               disabled={(date) =>
-                                date < new Date(new Date().setHours(0,0,0,0)) // Disable past dates
+                                date < new Date(new Date().setHours(0,0,0,0)) 
                               }
                               initialFocus
                             />
@@ -258,7 +315,7 @@ export default function SchedulePage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="sessionTime"
                     render={({ field }) => (
                       <FormItem>
@@ -273,7 +330,7 @@ export default function SchedulePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="venue"
                     render={({ field }) => (
                       <FormItem>
@@ -286,7 +343,7 @@ export default function SchedulePage() {
                     )}
                   />
                   <FormField
-                    control={form.control}
+                    control={scheduleUiForm.control}
                     name="duration"
                     render={({ field }) => (
                       <FormItem>
@@ -301,8 +358,8 @@ export default function SchedulePage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); setEditingClass(null); form.reset(); }}>Cancel</Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Saving..." : (editingClass ? "Update Session" : "Add Session")}</Button>
+                <Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); setEditingClass(null); scheduleUiForm.reset(); }}>Cancel</Button>
+                <Button type="submit" disabled={scheduleUiForm.formState.isSubmitting}>{scheduleUiForm.formState.isSubmitting ? "Saving..." : (editingClass ? "Update Session" : "Add Session")}</Button>
               </CardFooter>
             </form>
           </Form>
@@ -352,6 +409,120 @@ export default function SchedulePage() {
              <p className="text-muted-foreground text-center py-8">No classes scheduled yet. Click "Add New Session" to get started.</p>
           )}
         </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle className="font-headline flex items-center"><Brain className="mr-2 h-6 w-6 text-primary" /> AI Timetable Analysis</CardTitle>
+            <CardDescription>Get AI-powered feedback on your current schedule based on curriculum guidelines.</CardDescription>
+        </CardHeader>
+        <Form {...curriculumUiForm}>
+            <form onSubmit={curriculumUiForm.handleSubmit(handleAnalyzeTimetable)}>
+                <CardContent className="space-y-4">
+                     <FormField
+                        control={curriculumUiForm.control}
+                        name="guidelines"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Curriculum Guidelines & Notes</FormLabel>
+                            <FormControl>
+                                <Textarea
+                                placeholder="Describe subject priorities, required hours, preferred times, constraints, etc."
+                                className="min-h-[100px] resize-y"
+                                {...field}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button type="submit" disabled={isLoadingAiAnalysis || scheduledClasses.length === 0}>
+                        {isLoadingAiAnalysis ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Analyze Schedule with AI
+                    </Button>
+                    {scheduledClasses.length === 0 && <p className="text-sm text-destructive">Add some classes to the schedule to enable analysis.</p>}
+                </CardContent>
+            </form>
+        </Form>
+        {isLoadingAiAnalysis && (
+            <CardContent>
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Analyzing timetable, please wait...</span>
+                </div>
+            </CardContent>
+        )}
+        {aiAnalysisResult && !isLoadingAiAnalysis && (
+            <CardContent className="space-y-6 pt-4">
+                <Accordion type="multiple" defaultValue={['assessment', 'clashes']} className="w-full">
+                    <AccordionItem value="assessment">
+                        <AccordionTrigger className="text-lg hover:no-underline">
+                            <div className="flex items-center text-primary">
+                                <BarChart3 className="mr-2 h-5 w-5" /> Overall Assessment
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <p className="text-base">{aiAnalysisResult.overallAssessment}</p>
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    {aiAnalysisResult.identifiedClashes.length > 0 && (
+                        <AccordionItem value="clashes">
+                            <AccordionTrigger className="text-lg hover:no-underline">
+                                <div className="flex items-center text-destructive">
+                                 <AlertOctagon className="mr-2 h-5 w-5" /> Identified Clashes ({aiAnalysisResult.identifiedClashes.length})
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-3">
+                                {aiAnalysisResult.identifiedClashes.map((clash, index) => (
+                                    <div key={`clash-${index}`} className="p-3 border rounded-md bg-destructive/10">
+                                        <p className="font-semibold text-destructive-foreground">{clash.description}</p>
+                                        <p className="text-sm text-muted-foreground">Conflicting: {clash.conflictingItems.join(', ')}</p>
+                                        <ul className="list-disc list-inside pl-4 text-sm">
+                                            {clash.involvedClasses.map((cls, clsIdx) => (
+                                                <li key={`clash-detail-${index}-${clsIdx}`}>{cls.topic} on {cls.day} at {cls.time}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </AccordionContent>
+                        </AccordionItem>
+                    )}
+                     <AccordionItem value="time-allocation">
+                        <AccordionTrigger className="text-lg hover:no-underline">
+                            <div className="flex items-center text-primary">
+                             <ListChecks className="mr-2 h-5 w-5" /> Time Allocation Feedback
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            {aiAnalysisResult.timeAllocationFeedback.length > 0 ? (
+                                <ul className="list-disc space-y-2 pl-5">
+                                    {aiAnalysisResult.timeAllocationFeedback.map((feedback, index) => (
+                                        <li key={`timealloc-${index}`}>{feedback}</li>
+                                    ))}
+                                </ul>
+                            ) : <p>No specific time allocation feedback provided by AI.</p>}
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="suggestions">
+                        <AccordionTrigger className="text-lg hover:no-underline">
+                            <div className="flex items-center text-primary">
+                                <Lightbulb className="mr-2 h-5 w-5" /> General Suggestions
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                             {aiAnalysisResult.generalSuggestions.length > 0 ? (
+                                <ul className="list-disc space-y-2 pl-5">
+                                    {aiAnalysisResult.generalSuggestions.map((suggestion, index) => (
+                                        <li key={`gensuggest-${index}`}>{suggestion}</li>
+                                    ))}
+                                </ul>
+                            ) : <p>No general suggestions provided by AI.</p>}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </CardContent>
+        )}
       </Card>
     </div>
   );
