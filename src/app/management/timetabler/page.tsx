@@ -15,7 +15,7 @@ import { z } from "zod";
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getAiTimetableAnalysis } from "@/app/trainer/schedule/actions"; // Re-using trainer's action
+import { getAiTimetableAnalysis } from "@/app/trainer/schedule/actions";
 import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
 
 // Mock data - In a real app, this would come from a central service or database
@@ -98,8 +98,8 @@ export default function TimetablerDashboardPage() {
                 </Card>
             ))}
         </div>
-      </div>>
-    )
+      </div>
+    );
   }
 
   return (
@@ -202,6 +202,7 @@ export default function TimetablerDashboardPage() {
                                                       {clash.involvedClasses.map((cls, clsIdx) => (
                                                           <li key={`clash-detail-${index}-${clsIdx}`}>
                                                               {cls.topic} on {cls.day} at {cls.time}
+                                                              {cls.isCommon && <Badge variant="outline" className="ml-2 border-orange-500 text-orange-600">Common</Badge>}
                                                           </li>
                                                       ))}
                                                   </ul>
@@ -256,7 +257,7 @@ export default function TimetablerDashboardPage() {
           )}
         </Card>
 
-        <Card className="shadow-lg lg:col-span-1"> {/* Adjusted to lg:col-span-1, previously was part of a 3-col grid for place holders*/}
+        <Card className="shadow-lg lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-medium">Resource Management</CardTitle>
             <CheckSquare className="h-6 w-6 text-primary" />
@@ -288,5 +289,6 @@ export default function TimetablerDashboardPage() {
     </div>
   );
 }
+    
 
     
