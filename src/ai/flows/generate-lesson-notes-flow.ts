@@ -28,7 +28,7 @@ const GenerateLessonNotesInputSchema = z.object({
   studentAudience: z
     .string()
     .optional()
-    .describe('A description of the target student audience, e.g., "Second-year electrical engineering students" or "Automotive apprentice mechanics". This helps tailor examples and depth.'),
+    .describe('A description of the target student audience, e.g., "Second-year electrical engineering students", "Automotive apprentice mechanics", "Level 4 Food Technology students", "Water Engineering trainees". This helps tailor examples and depth.'),
 });
 
 export type GenerateLessonNotesInput = z.infer<
@@ -38,7 +38,7 @@ export type GenerateLessonNotesInput = z.infer<
 const GenerateLessonNotesOutputSchema = z.object({
   lessonNotes: z
     .string()
-    .describe('The generated lesson notes in Markdown format. For mathematical content, LaTeX syntax (e.g., `$x^2 + y^2 = r^2$`, `$$\\frac{a}{b}$$`) MUST be used for ALL formulas, equations, individual variables, and symbols. For technical drawing, detailed descriptions of visual elements or drawing steps should be provided.'),
+    .describe('The generated lesson notes in Markdown format. For mathematical content, LaTeX syntax (e.g., `$x^2 + y^2 = r^2$`, `$$\\frac{a}{b}$$`) MUST be used for ALL formulas, equations, individual variables, and symbols. For technical drawing, detailed descriptions of visual elements or drawing steps should be provided. For other technical/vocational subjects, practical steps, safety considerations, and industry-relevant examples should be included where appropriate.'),
 });
 
 export type GenerateLessonNotesOutput = z.infer<
@@ -56,15 +56,19 @@ const prompt = ai.definePrompt({
   tools: [askWolframAlpha],
   input: {schema: GenerateLessonNotesInputSchema},
   output: {schema: GenerateLessonNotesOutputSchema},
-  prompt: `You are an expert AI assistant tasked with creating **exceptionally comprehensive, detailed, technically accurate, and profoundly human-friendly** lesson notes for trainers.
-Your goal is to produce notes that are thorough, informative, directly usable for teaching, and remarkably easy to understand, even for complex topics.
+  prompt: `You are an expert AI assistant tasked with creating **exceptionally comprehensive, detailed, technically accurate, and profoundly human-friendly** lesson notes for trainers across a wide range of college-level subjects, including theoretical, technical, and vocational fields.
+Your goal is to produce notes that are thorough, informative, directly usable for teaching, and remarkably easy to understand, even for complex or highly practical topics.
 The output MUST be in Markdown format.
 
 Lesson Topic: {{{lessonTopic}}}
 
 {{#if studentAudience}}
 Student Audience: {{{studentAudience}}}
-**Crucially, tailor all explanations, examples, analogies, and the depth of discussion to be highly relevant, relatable, and appropriate for this specific student audience.** For instance, if explaining a physics concept to automotive students, use automotive examples. If explaining mathematics to electrical engineering students, use circuit or signal processing examples.
+**Crucially, tailor all explanations, examples, analogies, and the depth of discussion to be highly relevant, relatable, and appropriate for this specific student audience.** For instance:
+- If explaining physics to automotive students, use automotive examples.
+- If explaining chemistry to food technology students, use food processing examples.
+- If explaining fluid dynamics to water engineering students, use examples related to water systems, pipes, and pumps.
+- If explaining safety procedures to Level 4 Food Technology students, refer to relevant industry standards and equipment they would use.
 If the student audience is not specified, assume a general technical audience (e.g., first-year college students in a technical field or vocational training).
 {{/if}}
 
@@ -79,14 +83,14 @@ Key Points to Cover (elaborate on each extensively, providing significant depth 
 
 Desired NoteFormat: {{{noteFormat}}}
 
-**General Instructions for Explanations (ESPECIALLY for technical and mathematical content, but applicable to ALL subjects):**
-1.  **Start with the 'Why' and 'What':** Before diving into details or formulas, always explain the core concept in simple terms. Why is this topic important for the {{{studentAudience}}}? What problem does it solve for them? What is the main idea in plain language?
-2.  **Use Analogies:** For abstract concepts, use relatable analogies tailored to the {{{studentAudience}}}. For example, explaining electricity flow using water in pipes, or complex data structures using everyday organizational systems.
-3.  **Define Terms Clearly:** If a technical or specialized term or jargon is unavoidable, define it immediately in simple, clear language. If a simpler word or phrasing exists that conveys the same meaning accurately, prefer it.
+**General Instructions for Explanations (ESPECIALLY for technical, vocational, and mathematical content, but applicable to ALL subjects):**
+1.  **Start with the 'Why' and 'What':** Before diving into details, formulas, or procedures, always explain the core concept in simple terms. Why is this topic important for the {{{studentAudience}}}? What problem does it solve for them in their field? What is the main idea in plain language?
+2.  **Use Analogies:** For abstract or complex concepts, use relatable analogies tailored to the {{{studentAudience}}}. For example, explaining electrical circuits using water flow, or chemical reactions in food using cooking analogies.
+3.  **Define Terms Clearly:** If a technical, vocational, or specialized term or jargon is unavoidable, define it immediately in simple, clear language. If a simpler word or phrasing exists that conveys the same meaning accurately, prefer it.
 4.  **Build from Simple to Complex:** Introduce concepts in a logical sequence. Start with foundational ideas and gradually build up to more complex aspects. Don't assume too much prior knowledge beyond what is typical for the {{{studentAudience}}}.
-5.  **Step-by-Step for Processes/Arguments:** For procedures, problem-solving techniques, derivations, or the development of an argument, provide extremely clear, granular, step-by-step explanations. Explain the reasoning behind *each step*.
-6.  **Illustrative Examples:** Provide concrete examples that demonstrate the concept. These examples should be relevant to the {{{studentAudience}}}'s field of study or common experiences. Work through examples fully.
-7.  **Human-Friendly Tone:** Write as if you are a patient, knowledgeable, and enthusiastic teacher explaining this to someone eager to learn. Avoid overly dry or academic language where a more conversational or descriptive style would be clearer.
+5.  **Step-by-Step for Processes/Arguments/Procedures:** For procedures, problem-solving techniques, derivations, or the development of an argument (common in both theoretical and vocational subjects), provide extremely clear, granular, step-by-step explanations. Explain the reasoning behind *each step*. For vocational tasks, detail each action.
+6.  **Illustrative Examples:** Provide concrete examples that demonstrate the concept or procedure. These examples should be highly relevant to the {{{studentAudience}}}'s field of study or common experiences. Work through examples fully.
+7.  **Human-Friendly Tone:** Write as if you are a patient, knowledgeable, and enthusiastic teacher explaining this to someone eager to learn. Avoid overly dry or academic language where a more conversational or descriptive style would be clearer and more engaging.
 
 **Specific Instructions for Different Subject Categories (always tailor to {{{studentAudience}}})**
 -   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry, Laplace Transforms, Fourier Series, Differential Equations):**
@@ -106,19 +110,22 @@ Desired NoteFormat: {{{noteFormat}}}
     *   Outline steps for creating specific types of drawings or using particular techniques in a very structured, easy-to-reproduce manner, focusing on applications relevant to the {{{studentAudience}}}.
     *   Suggest practical exercises or examples pertinent to their field (e.g., for automotive students: "Describe, step-by-step, how to draw a first-angle orthographic projection of a simple engine component, explaining what each view represents," or for electrical students: "Explain the fundamental rules for dimensioning a PCB layout, as if to a beginner, and why these rules are important for manufacturing.").
 
--   **For All Other Subjects (including general theoretical, humanities, social sciences, arts, conceptual sciences, etc.):**
+-   **For All Other Technical, Vocational, and Theoretical Subjects (e.g., Food Technology, Water Engineering, ICT, Plumbing, Electrical Installation, Humanities, Social Sciences, Arts, Conceptual Sciences, etc.):**
     *   Your primary goal remains to produce **exceptionally comprehensive, detailed, conceptually accurate, and profoundly human-friendly** lesson notes. The "General Instructions for Explanations" provided above are critical here.
-    *   Adapt the level of detail, examples, analogies, and explanations to the complexity of the specific topic and the particular needs and background of the {{{studentAudience}}}.
-    *   For abstract or conceptual subjects, ensure you break down complex ideas into manageable parts. Define key terminology clearly and simply.
-    *   Explore different perspectives, schools of thought, or theories if relevant to the topic. Explain their main arguments and, if appropriate, how they compare or contrast.
-    *   Provide illustrative examples, case studies, scenarios, or thought experiments that make the concepts tangible and relatable to the {{{studentAudience}}}. For example, if discussing economic theories for business students, use business case studies. If discussing pedagogical theories for trainee teachers, use classroom scenarios.
-    *   Prioritize critical thinking and deep understanding. Encourage the development of arguments, analysis of concepts, or application of theories to practical situations (if applicable).
+    *   **Practical Relevance and Application (especially for vocational/technical):** For subjects like Food Technology or Water Engineering, heavily emphasize the practical application of concepts. Explain *how* these concepts are used in real-world industry settings, with equipment, materials, and processes relevant to the {{{studentAudience}}}. What problems do these concepts help solve in their chosen career path?
+    *   **Procedures and Processes (especially for vocational/technical):** If the topic involves specific procedures, techniques, or operational processes (e.g., a food preservation technique, a water testing procedure, configuring a network device), provide clear, step-by-step instructions. Explain the 'why' behind each step.
+    *   **Safety and Standards (especially for vocational/technical):** Where relevant (very common in vocational fields), incorporate information about safety protocols, industry standards, regulations, or best practices associated with the topic.
+    *   **Tools and Equipment (especially for vocational/technical):** If specific tools, equipment, or materials are central to the topic, describe them and their use in a way that is understandable to the {{{studentAudience}}}.
+    *   **Problem-Solving Focus (all subjects):** Frame content around solving problems or achieving outcomes relevant to the field. For theoretical subjects, this might be analytical problem-solving; for vocational, it's often practical problem-solving.
+    *   **Adapt Detail and Examples:** Adapt the level of detail, examples, analogies, and explanations to the complexity of the specific topic and the particular needs and background of the {{{studentAudience}}}. For example, discussing hygiene standards for "Level 4 Food Technology students" will require different examples and depth than discussing literary theory for "Final year English Literature students."
+    *   **Explore Perspectives (for theoretical/humanities):** For abstract or conceptual subjects, ensure you break down complex ideas into manageable parts. Define key terminology clearly and simply. Explore different perspectives, schools of thought, or theories if relevant to the topic. Explain their main arguments and, if appropriate, how they compare or contrast.
+    *   **Illustrative Scenarios (all subjects):** Provide illustrative examples, case studies, scenarios, or thought experiments that make the concepts tangible and relatable to the {{{studentAudience}}}.
     *   Always aim for exceptional clarity, accuracy, and intuitive understanding, tailored for *them*. The notes should be directly usable by a trainer to teach a comprehensive lesson.
 
 Please generate the lesson notes now. Ensure the content is rich and covers the topic and key points in significant depth according to the guidelines above, especially tailoring for the {{{studentAudience}}}.
-- If 'detailed-paragraph' format is requested, provide in-depth paragraphs with explanations, examples, and context. For technical subjects, integrate formulas (as LaTeX if math) or detailed descriptions smoothly within these paragraphs, making sure explanations are exceptionally intuitive and human, and relevant to the {{{studentAudience}}}.
-- If 'bullet-points' format is requested, create a structured list of detailed bullet points, possibly with sub-bullets, covering concepts, definitions, examples, and steps where applicable. LaTeX for math or descriptive elements for drawing should be used within bullets, with clear, human-friendly explanations for each point, tailored to the {{{studentAudience}}}.
-- If 'summary' format is requested, provide a comprehensive summary that still captures the main essence and critical details of the topic, including key formulas (as LaTeX if math) or core concepts for drawing, explained intuitively and clearly, with relevance to the {{{studentAudience}}}.
+- If 'detailed-paragraph' format is requested, provide in-depth paragraphs with explanations, examples, and context. For technical subjects, integrate formulas (as LaTeX if math), detailed descriptions of drawing elements, or step-by-step procedures for vocational tasks smoothly within these paragraphs, making sure explanations are exceptionally intuitive and human, and relevant to the {{{studentAudience}}}.
+- If 'bullet-points' format is requested, create a structured list of detailed bullet points, possibly with sub-bullets, covering concepts, definitions, examples, and steps where applicable. LaTeX for math, descriptive elements for drawing, or procedural steps for vocational topics should be used within bullets, with clear, human-friendly explanations for each point, tailored to the {{{studentAudience}}}.
+- If 'summary' format is requested, provide a comprehensive summary that still captures the main essence and critical details of the topic, including key formulas (as LaTeX if math), core concepts for drawing, or essential procedural outlines for vocational subjects, explained intuitively and clearly, with relevance to the {{{studentAudience}}}.
 
 Avoid superficial or overly brief content. Aim for notes that a trainer can rely on for a substantial lesson. The explanation should be as human and clear as possible, making complex topics accessible to the specified {{{studentAudience}}}.
 The notes should be formatted in valid Markdown.
