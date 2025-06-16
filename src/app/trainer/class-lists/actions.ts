@@ -1,3 +1,4 @@
+
 'use server';
 
 import { 
@@ -6,7 +7,7 @@ import {
     mockEnrollmentsData,
     mockAssessmentsForGradingData,
     mockStudentMarksData,
-    CURRENT_TRAINER_ID
+    CURRENT_TRAINER_ID // Ensure this is exported from data.ts
 } from './data';
 import type { Course, Student, Enrollment, AssessmentGrading, StudentMarkEntry } from './data';
 
@@ -42,12 +43,13 @@ export async function saveStudentMark(entry: StudentMarkEntry): Promise<{ succes
         m => m.studentId === entry.studentId && m.assessmentId === entry.assessmentId
     );
 
-    const markAsNumber = entry.mark === "" || entry.mark === undefined ? undefined : Number(entry.mark);
+    const markAsNumber = entry.mark === "" || entry.mark === undefined || entry.mark === null ? undefined : Number(entry.mark);
 
     // Basic validation for mock
     const assessment = mockAssessmentsForGradingData.find(a => a.id === entry.assessmentId);
     if (assessment && markAsNumber !== undefined && (markAsNumber < 0 || markAsNumber > assessment.totalMarks)) {
-        return { success: false, message: `Mark for ${mockStudentsData.find(s=>s.id === entry.studentId)?.name} (${markAsNumber}) is out of range (0-${assessment.totalMarks}).` };
+        const studentName = mockStudentsData.find(s=>s.id === entry.studentId)?.name || 'Student';
+        return { success: false, message: `Mark for ${studentName} (${markAsNumber}) is out of range (0-${assessment.totalMarks}).` };
     }
 
 
@@ -56,8 +58,9 @@ export async function saveStudentMark(entry: StudentMarkEntry): Promise<{ succes
     } else {
         mockStudentMarksData.push({...entry, mark: markAsNumber});
     }
-    console.log("Updated marks store:", mockStudentMarksData);
-    return { success: true, message: `Mark for ${mockStudentsData.find(s=>s.id === entry.studentId)?.name} saved.` };
+    // console.log("Updated marks store:", mockStudentMarksData);
+    const studentName = mockStudentsData.find(s=>s.id === entry.studentId)?.name || 'Student';
+    return { success: true, message: `Mark for ${studentName} saved.` };
 }
 
 export async function saveAllStudentMarks(entries: StudentMarkEntry[]): Promise<{ success: boolean; message: string; errors: string[] }> {
@@ -67,21 +70,20 @@ export async function saveAllStudentMarks(entries: StudentMarkEntry[]): Promise<
     let savedCount = 0;
 
     for (const entry of entries) {
-        // Skip saving if mark is undefined (meaning not entered or cleared)
-        if (entry.mark === undefined || entry.mark === "") {
-            // If there's an existing entry, we might want to remove it or update its mark to undefined
+        const markString = String(entry.mark).trim();
+        // Skip saving if mark is undefined or an empty string after trimming
+        if (entry.mark === undefined || entry.mark === null || markString === "") {
             const existingMarkIndex = mockStudentMarksData.findIndex(
                 m => m.studentId === entry.studentId && m.assessmentId === entry.assessmentId
             );
             if (existingMarkIndex > -1) {
-                mockStudentMarksData[existingMarkIndex].mark = undefined;
+                mockStudentMarksData[existingMarkIndex].mark = undefined; // Clear the mark
                 mockStudentMarksData[existingMarkIndex].comments = entry.comments || undefined; // update comments
             }
-            // If no mark was entered and no previous record, do nothing for this student for this assessment
-            continue;
+            continue; 
         }
 
-        const result = await saveStudentMark(entry); // saveStudentMark handles validation
+        const result = await saveStudentMark(entry); 
         if (!result.success) {
             allSuccessful = false;
             errorMessages.push(result.message);
@@ -97,6 +99,29 @@ export async function saveAllStudentMarks(entries: StudentMarkEntry[]): Promise<
     } else if (errorMessages.length > 0) {
         return { success: false, message: "Failed to save marks.", errors: errorMessages };
     } else {
-        return { success: true, message: "No marks were entered to save.", errors: [] };
+        return { success: true, message: "No valid marks were entered to save.", errors: [] };
     }
 }
+
+export async function updateCourseSharedResources(
+  courseId: string, 
+  videoUrlsString: string, 
+  imageUrlsString: string
+): Promise<{ success: boolean; message: string }> {
+  await delay(400);
+  const courseIndex = mockTrainerCoursesData.findIndex(c => c.id === courseId && c.trainerId === CURRENT_TRAINER_ID);
+
+  if (courseIndex === -1) {
+    return { success: false, message: "Course not found or not managed by you." };
+  }
+
+  const videoLinks = videoUrlsString.split(',').map(link => link.trim()).filter(link => link.length > 0 && (link.startsWith('http://') || link.startsWith('https://')));
+  const imageLinks = imageUrlsString.split(',').map(link => link.trim()).filter(link => link.length > 0 && (link.startsWith('http://') || link.startsWith('https://')));
+
+  mockTrainerCoursesData[courseIndex].sharedVideoLinks = videoLinks;
+  mockTrainerCoursesData[courseIndex].sharedImageLinks = imageLinks;
+
+  console.log(`Updated resources for course ${courseId}:`, mockTrainerCoursesData[courseIndex]);
+  return { success: true, message: "Shared resources updated successfully." };
+}
+
