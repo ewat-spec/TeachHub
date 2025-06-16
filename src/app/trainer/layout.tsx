@@ -20,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { href: "/trainer/schedule", icon: <CalendarDays />, label: "My Schedule", tooltip: "My Class Schedule" },
   { href: "/trainer/lesson-plans", icon: <BookOpenText />, label: "My Lesson Plans", tooltip: "My Lesson Plans" },
   { href: "/trainer/assessments", icon: <ClipboardCheck />, label: "My Assessments", tooltip: "My Assessments & CATs" },
+  { href: "/trainer/portfolios", icon: <FolderKanban />, label: "Student Portfolios", tooltip: "Student Portfolios of Evidence" },
   { href: "/trainer/notifications", icon: <Bell />, label: "My Notifications", tooltip: "My Notifications" },
 ];
 
