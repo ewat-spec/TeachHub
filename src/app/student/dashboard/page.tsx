@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle } from "lucide-react"; // Added MessageCircle
+import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle, UserCircle, Megaphone, Award, Activity, Briefcase, Navigation, Sparkles as SkillsSparkles } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,12 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Added Dialog components
-import { getAiAcademicHelp } from "./actions";
-import { submitStudentQuestionToTrainer } from "./actions"; // New action
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { getAiAcademicHelp, submitStudentQuestionToTrainer } from "./actions";
 import type { AskAcademicQuestionOutput } from "@/ai/flows/ask-academic-question-flow";
 import { LatexRenderer } from "@/components/common/LatexRenderer";
-
+import { Badge } from "@/components/ui/badge";
 
 const mockStudent = {
   id: "studentAlexDemo",
@@ -27,19 +26,25 @@ const mockStudent = {
   admissionNumber: "SCT221-0077/2024",
   course: "Automotive Engineering",
   yearOfStudy: "Year 2",
-  profilePicUrl: "https://placehold.co/100x100.png"
+  profilePicUrl: "https://placehold.co/120x120.png", // Slightly larger
+  mockSkills: ["Engine Diagnostics", "CAD Software Basics", "Workshop Safety", "Problem Solving"],
+  careerLinks: [
+    { title: "Explore Automotive Careers", url: "#" , icon: <Briefcase className="h-4 w-4 mr-2"/> },
+    { title: "Latest Auto Industry News", url: "#", icon: <Navigation className="h-4 w-4 mr-2"/> },
+  ]
 };
 
 const mockCourses = [
-  { id: "unit1", title: "Engine Systems", code: "AUT201", poeProgress: 75, credits: 15, teacher: "Mr. Harrison", poeStatus: "Partially Submitted", image: "https://placehold.co/600x400.png", imageHint: "engine mechanics" },
-  { id: "unit2", title: "Vehicle Electrical Systems", code: "AUT202", poeProgress: 40, credits: 12, teacher: "Ms. Electra", poeStatus: "Pending Submission", image: "https://placehold.co/600x400.png", imageHint: "car electrics" },
-  { id: "unit3", title: "Workshop Safety & Practice", code: "AUT203", poeProgress: 100, credits: 10, teacher: "Mr. Safety", poeStatus: "Completed & Verified", image: "https://placehold.co/600x400.png", imageHint: "workshop safety" },
-  { id: "unit4", title: "Automotive Materials Science", code: "AUT204", poeProgress: 10, credits: 10, teacher: "Dr. Metalloid", poeStatus: "Not Started", image: "https://placehold.co/600x400.png", imageHint: "metal gears" },
+  { id: "unit1", title: "Engine Systems", code: "AUT201", poeProgress: 75, credits: 15, teacher: "Mr. Harrison", poeStatus: "Partially Submitted", image: "https://placehold.co/600x400.png", imageHint: "engine mechanics repair" },
+  { id: "unit2", title: "Vehicle Electrical Systems", code: "AUT202", poeProgress: 40, credits: 12, teacher: "Ms. Electra", poeStatus: "Pending Submission", image: "https://placehold.co/600x400.png", imageHint: "car electrics circuitry" },
+  { id: "unit3", title: "Workshop Safety & Practice", code: "AUT203", poeProgress: 100, credits: 10, teacher: "Mr. Safety", poeStatus: "Completed & Verified", image: "https://placehold.co/600x400.png", imageHint: "workshop safety gear" },
+  { id: "unit4", title: "Automotive Materials Science", code: "AUT204", poeProgress: 10, credits: 10, teacher: "Dr. Metalloid", poeStatus: "Not Started", image: "https://placehold.co/600x400.png", imageHint: "metal gears components" },
 ];
 
 const mockAnnouncements = [
-    {id: "ann1", title: "Upcoming Practical Assessment for AUT201", date: "2024-10-15", content: "All Year 2 Automotive students are reminded about the practical assessment for Engine Systems scheduled next week."},
-    {id: "ann2", title: "Guest Lecture: Future of EV Technology", date: "2024-10-10", content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday."},
+    {id: "ann1", title: "Upcoming Practical Assessment for AUT201", date: "2024-10-15", content: "All Year 2 Automotive students are reminded about the practical assessment for Engine Systems scheduled next week. Check the portal for details.", type: "alert"},
+    {id: "ann2", title: "Guest Lecture: Future of EV Technology", date: "2024-10-10", content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday in the Main Hall.", type: "info"},
+    {id: "ann3", title: "PoE Submission Deadline Approaching", date: "2024-10-08", content: "Final deadline for AUT202 PoE submissions is Oct 20th. Ensure all evidence is uploaded.", type: "reminder"},
 ];
 
 const aiQuestionFormSchema = z.object({
@@ -49,7 +54,7 @@ type AiQuestionFormValues = z.infer<typeof aiQuestionFormSchema>;
 
 const trainerQuestionFormSchema = z.object({
   courseId: z.string(),
-  courseTitle: z.string(), // For display in modal
+  courseTitle: z.string(),
   questionToTrainer: z.string().min(10, {message: "Question must be at least 10 characters."}).max(1000, {message: "Question is too long (max 1000 characters)."}),
 });
 type TrainerQuestionFormValues = z.infer<typeof trainerQuestionFormSchema>;
@@ -63,7 +68,6 @@ export default function StudentDashboardPage() {
   const [isTrainerQuestionModalOpen, setIsTrainerQuestionModalOpen] = useState(false);
   const [currentCourseForQuestion, setCurrentCourseForQuestion] = useState<{id: string; title: string} | null>(null);
   const [isSubmittingTrainerQuestion, setIsSubmittingTrainerQuestion] = useState(false);
-
 
   useEffect(() => {
     setIsClient(true);
@@ -99,6 +103,7 @@ export default function StudentDashboardPage() {
         }
       });
       setAiAnswer(result);
+      aiForm.reset(); // Clear form after submission
     } catch (error) {
       toast({
         title: "AI Helper Error",
@@ -119,7 +124,6 @@ export default function StudentDashboardPage() {
   const onSubmitTrainerQuestion = async (data: TrainerQuestionFormValues) => {
     setIsSubmittingTrainerQuestion(true);
     try {
-      // In a real app, studentId would come from auth context
       const result = await submitStudentQuestionToTrainer({
         studentId: mockStudent.id,
         studentName: mockStudent.name,
@@ -140,19 +144,26 @@ export default function StudentDashboardPage() {
     }
   };
 
+  const getAnnouncementIcon = (type: string) => {
+    switch(type) {
+        case 'alert': return <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0" />;
+        case 'info': return <Activity className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />;
+        case 'reminder': return <Megaphone className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0" />;
+        default: return <Megaphone className="h-5 w-5 text-gray-500 mr-2 flex-shrink-0" />;
+    }
+  };
 
   if (!isClient) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-10 bg-muted rounded w-3/4"></div>
-        <Card className="shadow-lg">
-          <CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader>
-          <CardContent><div className="h-24 bg-muted rounded"></div></CardContent>
-        </Card>
-        <div className="grid gap-6 md:grid-cols-2">
-            {[1,2].map(i => (
-                <Card key={i} className="shadow-lg"><CardContent className="h-40 bg-muted rounded p-4"></CardContent></Card>
-            ))}
+      <div className="space-y-8 animate-pulse">
+        <div className="h-12 bg-muted rounded w-3/4"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-1 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
+            <Card className="lg:col-span-2 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
+        </div>
+        <Card className="shadow-xl"><CardContent className="h-40 bg-muted rounded p-4"></CardContent></Card>
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {[1,2,3].map(i => ( <Card key={i} className="shadow-lg"><CardContent className="h-80 bg-muted rounded p-4"></CardContent></Card>))}
         </div>
       </div>
     );
@@ -161,69 +172,114 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`Welcome, ${mockStudent.name}!`}
-        description="Your personal dashboard for managing your studies and Portfolio of Evidence."
+        title={`Hello, ${mockStudent.name.split(' ')[0]}! Ready to learn?`}
+        description="Your student dashboard: track progress, get help, and manage your studies."
       />
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1 shadow-xl">
-            <CardHeader className="items-center text-center">
+        <Card className="lg:col-span-1 shadow-xl bg-card hover:shadow-primary/10 transition-shadow">
+            <CardHeader className="items-center text-center border-b pb-4 bg-primary/5 rounded-t-lg">
                  <Image 
                     src={mockStudent.profilePicUrl} 
                     alt="Student Profile Picture" 
                     width={100} 
                     height={100} 
-                    className="rounded-full mx-auto border-4 border-primary shadow-md"
-                    data-ai-hint="student portrait" 
+                    className="rounded-full mx-auto border-4 border-primary shadow-lg"
+                    data-ai-hint="student portrait friendly" 
                   />
-                <CardTitle className="text-2xl font-headline mt-3">{mockStudent.name}</CardTitle>
-                <CardDescription>{mockStudent.admissionNumber}</CardDescription>
+                <CardTitle className="text-2xl font-headline mt-3 text-primary">{mockStudent.name}</CardTitle>
+                <CardDescription className="text-muted-foreground">{mockStudent.admissionNumber}</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm space-y-2">
-                <p><strong>Course:</strong> {mockStudent.course}</p>
-                <p><strong>Year/Level:</strong> {mockStudent.yearOfStudy}</p>
-                <Button className="w-full mt-4" variant="outline" onClick={() => toast({title: "Mock Action", description: "Profile editing page coming soon."})}>
-                    <FileText className="mr-2 h-4 w-4" /> Edit My Profile (Mock)
+            <CardContent className="text-sm space-y-2 pt-4">
+                <p><strong className="text-foreground">Course:</strong> <span className="text-muted-foreground">{mockStudent.course}</span></p>
+                <p><strong className="text-foreground">Year/Level:</strong> <span className="text-muted-foreground">{mockStudent.yearOfStudy}</span></p>
+                <Button asChild className="w-full mt-4" variant="outline">
+                  <a href="/student/profile">
+                    <UserCircle className="mr-2 h-4 w-4" /> View My Profile
+                  </a>
                 </Button>
             </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 shadow-xl">
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center"><AlertCircle className="mr-2 h-6 w-6 text-primary" />Announcements</CardTitle>
+        <Card className="lg:col-span-2 shadow-xl hover:shadow-accent/10 transition-shadow">
+            <CardHeader className="border-b pb-3">
+                <CardTitle className="font-headline text-xl flex items-center text-accent-foreground"><Megaphone className="mr-2 h-6 w-6 text-accent" />Latest Announcements</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+            <CardContent className="pt-4 space-y-3 max-h-[280px] overflow-y-auto">
                 {mockAnnouncements.length > 0 ? mockAnnouncements.map(ann => (
-                    <div key={ann.id} className="p-3 border rounded-lg bg-muted/50">
-                        <h4 className="font-semibold text-md">{ann.title}</h4>
-                        <p className="text-xs text-muted-foreground mb-1">Posted: {ann.date}</p>
-                        <p className="text-sm">{ann.content}</p>
+                    <div key={ann.id} className="p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start">
+                            {getAnnouncementIcon(ann.type)}
+                            <div>
+                                <h4 className="font-semibold text-md text-foreground">{ann.title}</h4>
+                                <p className="text-xs text-muted-foreground mb-1">Posted: {ann.date}</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-7">{ann.content}</p>
                     </div>
-                )) : <p className="text-muted-foreground">No recent announcements.</p>}
+                )) : <p className="text-muted-foreground text-center py-4">No recent announcements.</p>}
             </CardContent>
         </Card>
     </div>
 
-    <Card className="shadow-xl">
-        <CardHeader>
-            <CardTitle className="font-headline flex items-center">
-                <Brain className="mr-2 h-6 w-6 text-primary" /> AI Academic Helper
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-xl hover:shadow-primary/10 transition-shadow">
+            <CardHeader className="border-b">
+                <CardTitle className="font-headline text-xl flex items-center text-primary"><SkillsSparkles className="mr-2 h-6 w-6"/>My Skills Pathway (Mock)</CardTitle>
+                <CardDescription>Key skills you're developing in {mockStudent.course}.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-2">
+                {mockStudent.mockSkills.length > 0 ? (
+                    <ul className="grid grid-cols-2 gap-2">
+                    {mockStudent.mockSkills.map((skill, index) => (
+                        <li key={index} className="flex items-center text-sm">
+                            <Award className="h-4 w-4 mr-2 text-yellow-500 flex-shrink-0"/>
+                            <span className="text-muted-foreground">{skill}</span>
+                        </li>
+                    ))}
+                    </ul>
+                ) : (
+                    <p className="text-muted-foreground">Skills tracking coming soon!</p>
+                )}
+            </CardContent>
+        </Card>
+
+        <Card className="shadow-xl hover:shadow-primary/10 transition-shadow">
+            <CardHeader className="border-b">
+                <CardTitle className="font-headline text-xl flex items-center text-primary"><Navigation className="mr-2 h-6 w-6"/>Career Compass (Mock)</CardTitle>
+                <CardDescription>Explore industry insights related to your field.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-2">
+                 {mockStudent.careerLinks.map((link, index) => (
+                    <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-muted transition-colors text-sm text-primary hover:underline">
+                        {link.icon} {link.title}
+                    </a>
+                ))}
+            </CardContent>
+        </Card>
+    </div>
+
+
+    <Card className="shadow-xl hover:shadow-accent/10 transition-shadow">
+        <CardHeader className="border-b">
+            <CardTitle className="font-headline text-xl flex items-center text-accent-foreground">
+                <Brain className="mr-2 h-6 w-6 text-accent" /> AI Academic Helper
             </CardTitle>
-            <CardDescription>Ask a question and get AI-powered assistance. For complex topics, always verify with your instructor.</CardDescription>
+            <CardDescription>Stuck on a concept? Ask the AI for a quick explanation. Always verify complex info with your trainer.</CardDescription>
         </CardHeader>
         <Form {...aiForm}>
             <form onSubmit={aiForm.handleSubmit(onAskAiSubmit)}>
-                <CardContent className="space-y-4">
+                <CardContent className="pt-4 space-y-4">
                     <FormField
                         control={aiForm.control}
                         name="question"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Your Question:</FormLabel>
+                            <FormLabel className="font-semibold text-foreground">Your Question:</FormLabel>
                             <FormControl>
                                 <Textarea
-                                placeholder="e.g., Explain the difference between a series and parallel circuit. What is the formula for calculating torque?"
-                                className="min-h-[100px] resize-y"
+                                placeholder={`e.g., In ${mockStudent.course.toLowerCase()}, how does a differential work? What's Ohm's Law?`}
+                                className="min-h-[100px] resize-y bg-background"
                                 {...field}
                                 />
                             </FormControl>
@@ -231,7 +287,7 @@ export default function StudentDashboardPage() {
                             </FormItem>
                         )}
                     />
-                     <Button type="submit" disabled={isLoadingAiAnswer}>
+                     <Button type="submit" disabled={isLoadingAiAnswer} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                         {isLoadingAiAnswer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Ask AI
                     </Button>
@@ -239,17 +295,17 @@ export default function StudentDashboardPage() {
             </form>
         </Form>
         {isLoadingAiAnswer && (
-            <CardContent>
-                <div className="flex items-center space-x-2 text-muted-foreground">
+            <CardContent className="pt-0">
+                <div className="flex items-center space-x-2 text-muted-foreground p-3 bg-muted rounded-md">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>AI is thinking... please wait.</span>
+                    <span>AI is formulating an answer... please wait.</span>
                 </div>
             </CardContent>
         )}
         {aiAnswer && !isLoadingAiAnswer && (
-            <CardContent>
-                <h3 className="text-md font-semibold mb-2 text-primary">AI's Answer:</h3>
-                <div className="p-3 border rounded-md bg-muted/50 min-h-[100px] prose-sm max-w-none">
+            <CardContent className="pt-0">
+                <h3 className="text-md font-semibold mb-2 text-accent-foreground">AI's Response:</h3>
+                <div className="p-4 border rounded-md bg-muted/30 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5">
                   <LatexRenderer latexString={aiAnswer.answer} />
                 </div>
             </CardContent>
@@ -260,32 +316,40 @@ export default function StudentDashboardPage() {
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
             <BookOpen className="mr-3 h-7 w-7"/>My Courses & Portfolio of Evidence
         </h2>
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2"> {/* Changed to 2-col for XL to make cards bigger */}
           {mockCourses.map((course) => (
-            <Card key={course.id} className="shadow-lg hover:shadow-primary/20 transition-shadow duration-300 flex flex-col">
-              <div className="relative h-40 w-full">
+            <Card key={course.id} className="shadow-lg hover:shadow-primary/20 transition-shadow duration-300 flex flex-col bg-card">
+              <div className="relative h-48 w-full"> {/* Increased image height */}
                 <Image 
                     src={course.image} 
-                    alt={`${course.title} placeholder image`} 
+                    alt={`${course.title} course image`} 
                     fill 
                     style={{objectFit: "cover"}} 
                     className="rounded-t-lg"
                     data-ai-hint={course.imageHint}
                 />
               </div>
-              <CardHeader>
-                <CardTitle className="font-headline text-xl">{course.title}</CardTitle>
+              <CardHeader className="border-t bg-primary/5">
+                <CardTitle className="font-headline text-xl text-primary">{course.title}</CardTitle>
                 <CardDescription>Code: {course.code} | Credits: {course.credits}</CardDescription>
-                <CardDescription>Teacher: {course.teacher}</CardDescription>
+                <CardDescription>Trainer: {course.teacher}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow space-y-3">
+              <CardContent className="flex-grow space-y-3 pt-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">PoE Progress:</span>
+                    <span className="font-medium text-foreground">PoE Progress:</span>
                     <span className="text-primary font-semibold">{course.poeProgress}%</span>
                   </div>
-                  <Progress value={course.poeProgress} aria-label={`${course.title} PoE progress ${course.poeProgress}%`} />
-                  <p className="text-xs text-muted-foreground mt-1">Status: {course.poeStatus}</p>
+                  <Progress value={course.poeProgress} aria-label={`${course.title} PoE progress ${course.poeProgress}%`} className="h-3"/>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center">
+                    Status: 
+                    <Badge 
+                        variant={course.poeStatus === "Completed & Verified" ? "default" : course.poeStatus === "Partially Submitted" ? "secondary" : "outline"}
+                        className={`ml-1.5 ${course.poeStatus === "Completed & Verified" ? 'bg-green-600 text-white' : ''}`}
+                    >
+                        {course.poeStatus}
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 border-t">
@@ -313,11 +377,11 @@ export default function StudentDashboardPage() {
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
             <BarChart2 className="mr-3 h-7 w-7" />My Academic Progress (Mock)
         </h2>
-        <Card className="shadow-lg">
+        <Card className="shadow-lg hover:shadow-primary/10 transition-shadow">
             <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">Detailed charts and grades will be displayed here.</p>
-                <div className="mt-4 h-48 bg-muted rounded-md flex items-center justify-center">
-                    <BarChart2 className="h-16 w-16 text-muted-foreground/50"/>
+                <p className="text-muted-foreground">Detailed charts and grades will be displayed here soon.</p>
+                <div className="mt-4 h-48 bg-muted/50 rounded-md flex items-center justify-center">
+                    <BarChart2 className="h-16 w-16 text-muted-foreground/30"/>
                 </div>
             </CardContent>
         </Card>
@@ -329,9 +393,9 @@ export default function StudentDashboardPage() {
                  <Form {...trainerQuestionForm}>
                     <form onSubmit={trainerQuestionForm.handleSubmit(onSubmitTrainerQuestion)}>
                         <DialogHeader>
-                            <DialogTitle className="font-headline">Ask Your Trainer</DialogTitle>
+                            <DialogTitle className="font-headline text-primary">Ask Your Trainer</DialogTitle>
                             <DialogDescription>
-                                Your question regarding "<strong>{currentCourseForQuestion.title}</strong>" will be sent to your trainer.
+                                Your question regarding "<strong>{currentCourseForQuestion.title}</strong>" will be sent to your trainer. Be specific!
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -340,7 +404,7 @@ export default function StudentDashboardPage() {
                                 name="questionToTrainer"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel htmlFor="questionToTrainerText">Your Question:</FormLabel>
+                                    <FormLabel htmlFor="questionToTrainerText" className="font-semibold text-foreground">Your Question:</FormLabel>
                                     <FormControl>
                                         <Textarea
                                             id="questionToTrainerText"
