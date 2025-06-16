@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users } from "lucide-react";
+import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
@@ -65,6 +65,7 @@ export default function LessonPlansPage() {
   
   const [aiLessonNotes, setAiLessonNotes] = useState<GenerateLessonNotesOutput | null>(null);
   const [isLoadingAiLessonNotes, setIsLoadingAiLessonNotes] = useState(false);
+  const [aiNotesPreviewColor, setAiNotesPreviewColor] = useState<string>("#333333"); // Default preview color
 
   const [isClient, setIsClient] = useState(false);
 
@@ -358,8 +359,21 @@ export default function LessonPlansPage() {
                                   <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
                               </AccordionTrigger>
                               <AccordionContent className="space-y-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Label htmlFor="aiNotesColorPicker" className="flex items-center text-sm">
+                                      <Palette className="mr-1.5 h-4 w-4 text-muted-foreground"/>
+                                      Preview Color:
+                                    </Label>
+                                    <Input 
+                                      id="aiNotesColorPicker"
+                                      type="color" 
+                                      value={aiNotesPreviewColor}
+                                      onChange={(e) => setAiNotesPreviewColor(e.target.value)}
+                                      className="h-8 w-14 p-1 rounded"
+                                    />
+                                  </div>
                                   <div className="p-3 border rounded-md bg-white min-h-[150px] overflow-y-auto">
-                                    <LatexRenderer latexString={aiLessonNotes.lessonNotes} />
+                                    <LatexRenderer latexString={aiLessonNotes.lessonNotes} textColor={aiNotesPreviewColor} />
                                   </div>
                                   <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
                                       <Copy className="mr-2 h-4 w-4" /> Copy to My Lesson Notes
