@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, UserSearch, FolderOpen } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -52,6 +52,13 @@ const cbetLevels = [
   "Other",
 ] as const;
 
+// Mock student data for selection
+const mockStudents = [
+  { id: "student1", name: "Student Alpha" },
+  { id: "student2", name: "Student Beta" },
+  { id: "student3", name: "Student Gamma" },
+  { id: "student4", name: "Alex DemoStudent" }, // Matching student from student portal
+];
 
 const portfolioEvidenceSchema = z.object({
   id: z.string().optional(),
@@ -75,6 +82,8 @@ interface PortfolioEvidenceItem extends PortfolioEvidenceFormValues {
 const initialEvidence: PortfolioEvidenceItem[] = [
   { id: "poe1", studentName: "Student Alpha", courseName: "Safety Procedures", cbetLevel: "Level 4", evidenceTitle: "Workshop Safety Quiz", evidenceType: "Assessment Result", evidenceDescription: "Completed safety quiz with 90% score.", evidenceLink: "", dateAdded: new Date("2024-08-15"), trainerNotes: "Good understanding of PPE." },
   { id: "poe2", studentName: "Student Beta", courseName: "Vehicle Technology", cbetLevel: "Intermediate", evidenceTitle: "Engine Teardown Practical", evidenceType: "Practical Observation", evidenceDescription: "Successfully identified all major engine components.", evidenceLink: "https://placehold.co/600x400.png", dateAdded: new Date("2024-08-20"), trainerNotes: "Needs to improve on tool handling." },
+  { id: "poe3", studentName: "Student Alpha", courseName: "Vehicle Technology", cbetLevel: "Level 4", evidenceTitle: "Braking System Inspection", evidenceType: "Practical Observation", evidenceDescription: "Demonstrated correct procedure for brake inspection.", evidenceLink: "", dateAdded: new Date("2024-08-22"), trainerNotes: "Confident and knowledgeable." },
+  { id: "poe4", studentName: "Alex DemoStudent", courseName: "Automotive Engineering", cbetLevel: "Level 2", evidenceTitle: "Engine Systems Quiz 1", evidenceType: "Assessment Result", evidenceDescription: "Score: 85/100. Showed good understanding of basic engine components.", evidenceLink: "", dateAdded: new Date("2024-09-01"), trainerNotes: "Ready for next module." },
 ];
 
 export default function StudentPortfoliosPage() {
@@ -82,6 +91,7 @@ export default function StudentPortfoliosPage() {
   const [evidenceList, setEvidenceList] = useState<PortfolioEvidenceItem[]>(initialEvidence);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvidence, setEditingEvidence] = useState<PortfolioEvidenceItem | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -102,18 +112,29 @@ export default function StudentPortfoliosPage() {
       });
       setIsFormOpen(true);
     } else {
-      form.reset({ studentName: "", courseName: "", cbetLevel: undefined, evidenceTitle: "", evidenceType: undefined, evidenceDescription: "", evidenceLink: "", dateAdded: new Date(), trainerNotes: "" });
+      form.reset({ 
+        studentName: selectedStudentName || "", // Pre-fill if a student is selected
+        courseName: "", 
+        cbetLevel: undefined, 
+        evidenceTitle: "", 
+        evidenceType: undefined, 
+        evidenceDescription: "", 
+        evidenceLink: "", 
+        dateAdded: new Date(), 
+        trainerNotes: "" 
+      });
     }
-  }, [editingEvidence, form]);
+  }, [editingEvidence, form, selectedStudentName]);
 
   async function onSubmit(data: PortfolioEvidenceFormValues) {
     try {
       const result = await savePortfolioEvidence(data);
       if (result.success) {
+        const newOrUpdatedEvidence = { ...data, id: editingEvidence ? editingEvidence.id : result.id! } as PortfolioEvidenceItem;
         if (editingEvidence) {
-          setEvidenceList(evidenceList.map(ev => ev.id === editingEvidence.id ? { ...data, id: editingEvidence.id } as PortfolioEvidenceItem : ev));
+          setEvidenceList(evidenceList.map(ev => ev.id === editingEvidence.id ? newOrUpdatedEvidence : ev));
         } else {
-          setEvidenceList([...evidenceList, { ...data, id: result.id! } as PortfolioEvidenceItem]);
+          setEvidenceList([...evidenceList, newOrUpdatedEvidence]);
         }
         toast({ title: editingEvidence ? "Evidence Updated" : "Evidence Saved", description: result.message, action: <CheckCircle className="text-green-500"/> });
         setEditingEvidence(null);
@@ -129,6 +150,7 @@ export default function StudentPortfoliosPage() {
 
   const handleEdit = (evidence: PortfolioEvidenceItem) => {
     setEditingEvidence(evidence);
+    setSelectedStudentName(evidence.studentName); // Ensure selected student matches item being edited
   };
 
   const handleDelete = async (evidenceId: string) => {
@@ -147,16 +169,32 @@ export default function StudentPortfoliosPage() {
 
   const openNewForm = () => {
     setEditingEvidence(null);
-    form.reset({ studentName: "", courseName: "", cbetLevel: undefined, evidenceTitle: "", evidenceType: undefined, evidenceDescription: "", evidenceLink: "", dateAdded: new Date(), trainerNotes: "" });
+    // Pre-fill studentName if one is already selected, otherwise leave it blank for the trainer to fill
+    form.reset({ 
+        studentName: selectedStudentName || "", 
+        courseName: "", 
+        cbetLevel: undefined, 
+        evidenceTitle: "", 
+        evidenceType: undefined, 
+        evidenceDescription: "", 
+        evidenceLink: "", 
+        dateAdded: new Date(), 
+        trainerNotes: "" 
+    });
     setIsFormOpen(true);
   }
+
+  const filteredEvidence = selectedStudentName 
+    ? evidenceList.filter(ev => ev.studentName === selectedStudentName)
+    : []; // Show no evidence if no student is selected, or show all: evidenceList
 
   if (!isClient) {
     return (
       <div className="space-y-6">
         <PageHeader title="Student Portfolios" description="Manage portfolio of evidence for your students." />
         <div className="animate-pulse">
-            <div className="h-10 bg-muted rounded w-40 mb-4"></div>
+            <div className="h-10 bg-muted rounded w-1/3 mb-4"></div>
+            <div className="h-10 bg-muted rounded w-full mb-4"></div>
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <div className="h-8 bg-muted rounded w-full mb-2"></div>
@@ -172,20 +210,43 @@ export default function StudentPortfoliosPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Student Portfolios"
-        description="Manage portfolio of evidence for your students across various courses and CBET levels."
+        title="Student Portfolios of Evidence"
+        description="Select a student to view their portfolio, or add new evidence."
         actions={
-          <Button onClick={openNewForm}>
+          <Button onClick={openNewForm} disabled={!selectedStudentName && !isFormOpen}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Evidence
           </Button>
         }
       />
 
+      <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle className="font-headline flex items-center"><UserSearch className="mr-2 h-5 w-5 text-primary"/>Select Student</CardTitle>
+            <CardDescription>Choose a student to view and manage their Portfolio of Evidence.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Select onValueChange={(value) => setSelectedStudentName(value)} value={selectedStudentName || ""}>
+                <SelectTrigger className="w-full md:w-[300px]">
+                    <SelectValue placeholder="Select a student..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="">-- Select a Student --</SelectItem>
+                    {mockStudents.map(student => (
+                        <SelectItem key={student.id} value={student.name}>{student.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </CardContent>
+      </Card>
+
       {isFormOpen && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">{editingEvidence ? "Edit Portfolio Evidence" : "Add New Portfolio Evidence"}</CardTitle>
-            <CardDescription>{editingEvidence ? "Update the details of this evidence item." : "Fill in the form to add new evidence to a student's portfolio."}</CardDescription>
+            <CardDescription>
+                {editingEvidence ? `Update evidence for ${editingEvidence.studentName}.` : 
+                (selectedStudentName ? `Add new evidence for ${selectedStudentName}.` : "Fill in student and evidence details.")}
+            </CardDescription>
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -197,7 +258,14 @@ export default function StudentPortfoliosPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Student Name</FormLabel>
-                        <FormControl><Input placeholder="Enter student's full name" {...field} /></FormControl>
+                        <FormControl>
+                            <Input 
+                                placeholder="Enter student's full name" 
+                                {...field} 
+                                readOnly={!!selectedStudentName && !editingEvidence} // Read-only if student selected from dropdown and not editing
+                            />
+                        </FormControl>
+                        {selectedStudentName && !editingEvidence && <FormDescription>Adding evidence for {selectedStudentName}.</FormDescription>}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -222,7 +290,7 @@ export default function StudentPortfoliosPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>CBET Level</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select CBET Level" />
@@ -244,7 +312,7 @@ export default function StudentPortfoliosPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Type of Evidence</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select evidence type" />
@@ -327,7 +395,6 @@ export default function StudentPortfoliosPage() {
                                 mode="single"
                                 selected={field.value}
                                 onSelect={field.onChange}
-                                // disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                                 initialFocus
                                 />
                             </PopoverContent>
@@ -358,53 +425,66 @@ export default function StudentPortfoliosPage() {
         </Card>
       )}
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline">Portfolio Evidence Log</CardTitle>
-          <CardDescription>View and manage all recorded student evidence. (Filters for student, course, level coming soon)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {evidenceList.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead className="hidden sm:table-cell">Level</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="hidden md:table-cell">Type</TableHead>
-                  <TableHead className="hidden lg:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {evidenceList.sort((a,b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()).map((evidence) => (
-                  <TableRow key={evidence.id}>
-                    <TableCell className="font-medium">{evidence.studentName}</TableCell>
-                    <TableCell>{evidence.courseName}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{evidence.cbetLevel}</TableCell>
-                    <TableCell className="truncate max-w-[150px] sm:max-w-xs">{evidence.evidenceTitle}</TableCell>
-                    <TableCell className="hidden md:table-cell">{evidence.evidenceType}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{format(new Date(evidence.dateAdded), "MMM dd, yyyy")}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(evidence)} className="mr-2 hover:text-primary">
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(evidence.id)} className="hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </TableCell>
+      {selectedStudentName && !isFormOpen && (
+        <Card className="shadow-lg mt-6">
+          <CardHeader>
+            <CardTitle className="font-headline flex items-center">
+                <FolderOpen className="mr-2 h-5 w-5 text-primary"/> Portfolio for: {selectedStudentName}
+            </CardTitle>
+            <CardDescription>Displaying all recorded evidence for the selected student.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredEvidence.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Course</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead className="hidden lg:table-cell">Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">No portfolio evidence recorded yet. Click "Add New Evidence" to get started.</p>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {filteredEvidence.sort((a,b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()).map((evidence) => (
+                    <TableRow key={evidence.id}>
+                      <TableCell>{evidence.courseName}</TableCell>
+                      <TableCell>{evidence.cbetLevel}</TableCell>
+                      <TableCell className="font-medium truncate max-w-[150px] sm:max-w-xs">{evidence.evidenceTitle}</TableCell>
+                      <TableCell className="hidden md:table-cell">{evidence.evidenceType}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{format(new Date(evidence.dateAdded), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(evidence)} className="mr-2 hover:text-primary">
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(evidence.id)} className="hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No portfolio evidence recorded for {selectedStudentName}. Click "Add New Evidence" to get started.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {!selectedStudentName && !isFormOpen && (
+         <Card className="shadow-lg mt-6">
+            <CardContent className="py-12 text-center">
+                <UserSearch className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-xl font-semibold text-muted-foreground">Select a Student</p>
+                <p className="text-sm text-muted-foreground">Please choose a student from the dropdown above to view their portfolio.</p>
+            </CardContent>
+         </Card>
+      )}
     </div>
   );
 }
+
+    
