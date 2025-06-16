@@ -4,13 +4,21 @@
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress"; // For mock progress
-import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { getAiAcademicHelp } from "./actions";
+import type { AskAcademicQuestionOutput } from "@/ai/flows/ask-academic-question-flow";
+import { LatexRenderer } from "@/components/common/LatexRenderer";
 
-// Mock student data - in a real app, this would come from auth/context or API
+
 const mockStudent = {
   name: "Alex DemoStudent",
   admissionNumber: "SCT221-0077/2024",
@@ -31,14 +39,27 @@ const mockAnnouncements = [
     {id: "ann2", title: "Guest Lecture: Future of EV Technology", date: "2024-10-10", content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday."},
 ];
 
+const aiQuestionFormSchema = z.object({
+  question: z.string().min(10, { message: "Question must be at least 10 characters." }).max(500, {message: "Question is too long (max 500 characters)."}),
+});
+type AiQuestionFormValues = z.infer<typeof aiQuestionFormSchema>;
+
 
 export default function StudentDashboardPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [isLoadingAiAnswer, setIsLoadingAiAnswer] = useState(false);
+  const [aiAnswer, setAiAnswer] = useState<AskAcademicQuestionOutput | null>(null);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const aiForm = useForm<AiQuestionFormValues>({
+    resolver: zodResolver(aiQuestionFormSchema),
+    defaultValues: { question: "" },
+    mode: "onChange",
+  });
 
   const handlePoeAction = (courseTitle: string, action: "view" | "upload") => {
     toast({
@@ -46,6 +67,29 @@ export default function StudentDashboardPage() {
       description: `This would ${action} Portfolio of Evidence. Feature coming soon!`,
     });
   };
+
+  const onAskAiSubmit = async (data: AiQuestionFormValues) => {
+    setIsLoadingAiAnswer(true);
+    setAiAnswer(null);
+    try {
+      const result = await getAiAcademicHelp({
+        question: data.question,
+        studentContext: { // Pass mock context for now
+          course: mockStudent.course,
+        }
+      });
+      setAiAnswer(result);
+    } catch (error) {
+      toast({
+        title: "AI Helper Error",
+        description: error instanceof Error ? error.message : "Could not get an answer from the AI.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingAiAnswer(false);
+    }
+  };
+
 
   if (!isClient) {
     return (
@@ -72,7 +116,6 @@ export default function StudentDashboardPage() {
       />
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Student Profile Card */}
         <Card className="lg:col-span-1 shadow-xl">
             <CardHeader className="items-center text-center">
                  <Image 
@@ -95,7 +138,6 @@ export default function StudentDashboardPage() {
             </CardContent>
         </Card>
 
-        {/* Announcements Card */}
         <Card className="lg:col-span-2 shadow-xl">
             <CardHeader>
                 <CardTitle className="font-headline flex items-center"><AlertCircle className="mr-2 h-6 w-6 text-primary" />Announcements</CardTitle>
@@ -112,6 +154,59 @@ export default function StudentDashboardPage() {
         </Card>
     </div>
 
+    {/* AI Academic Helper Card */}
+    <Card className="shadow-xl">
+        <CardHeader>
+            <CardTitle className="font-headline flex items-center">
+                <Brain className="mr-2 h-6 w-6 text-primary" /> AI Academic Helper
+            </CardTitle>
+            <CardDescription>Ask a question and get AI-powered assistance. For complex topics, always verify with your instructor.</CardDescription>
+        </CardHeader>
+        <Form {...aiForm}>
+            <form onSubmit={aiForm.handleSubmit(onAskAiSubmit)}>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={aiForm.control}
+                        name="question"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Your Question:</FormLabel>
+                            <FormControl>
+                                <Textarea
+                                placeholder="e.g., Explain the difference between a series and parallel circuit. What is the formula for calculating torque?"
+                                className="min-h-[100px] resize-y"
+                                {...field}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <Button type="submit" disabled={isLoadingAiAnswer}>
+                        {isLoadingAiAnswer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Ask AI
+                    </Button>
+                </CardContent>
+            </form>
+        </Form>
+        {isLoadingAiAnswer && (
+            <CardContent>
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>AI is thinking... please wait.</span>
+                </div>
+            </CardContent>
+        )}
+        {aiAnswer && !isLoadingAiAnswer && (
+            <CardContent>
+                <h3 className="text-md font-semibold mb-2 text-primary">AI's Answer:</h3>
+                <div className="p-3 border rounded-md bg-muted/50 min-h-[100px] prose-sm max-w-none overflow-x-auto">
+                  <LatexRenderer latexString={aiAnswer.answer} />
+                </div>
+            </CardContent>
+        )}
+    </Card>
+
 
       <section>
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
@@ -124,8 +219,8 @@ export default function StudentDashboardPage() {
                 <Image 
                     src={course.image} 
                     alt={`${course.title} placeholder image`} 
-                    layout="fill" 
-                    objectFit="cover" 
+                    fill // Changed from layout="fill" to fill for Next 13+
+                    style={{objectFit: "cover"}} // Added style for objectFit
                     className="rounded-t-lg"
                     data-ai-hint={course.imageHint}
                 />
@@ -158,7 +253,6 @@ export default function StudentDashboardPage() {
         </div>
       </section>
 
-      {/* Placeholder for other dashboard sections */}
       <section className="mt-12">
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
             <BarChart2 className="mr-3 h-7 w-7" />My Academic Progress (Mock)
