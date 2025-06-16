@@ -27,6 +27,7 @@ import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
 import type { GenerateLessonNotesInput, GenerateLessonNotesOutput } from '@/ai/flows/generate-lesson-notes-flow';
+import { LatexRenderer } from "@/components/common/LatexRenderer";
 
 const lessonPlanFormSchema = z.object({
   id: z.string().optional(),
@@ -357,12 +358,9 @@ export default function LessonPlansPage() {
                                   <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
                               </AccordionTrigger>
                               <AccordionContent className="space-y-3">
-                                  <Textarea 
-                                    value={aiLessonNotes.lessonNotes} 
-                                    readOnly 
-                                    className="min-h-[150px] bg-muted/50 font-mono text-xs"
-                                    placeholder="AI generated notes will appear here..."
-                                  />
+                                  <div className="p-3 border rounded-md bg-white min-h-[150px] overflow-y-auto">
+                                    <LatexRenderer latexString={aiLessonNotes.lessonNotes} />
+                                  </div>
                                   <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
                                       <Copy className="mr-2 h-4 w-4" /> Copy to My Lesson Notes
                                   </Button>

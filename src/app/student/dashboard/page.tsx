@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
@@ -74,7 +74,7 @@ export default function StudentDashboardPage() {
     try {
       const result = await getAiAcademicHelp({
         question: data.question,
-        studentContext: { // Pass mock context for now
+        studentContext: { 
           course: mockStudent.course,
         }
       });
@@ -200,7 +200,7 @@ export default function StudentDashboardPage() {
         {aiAnswer && !isLoadingAiAnswer && (
             <CardContent>
                 <h3 className="text-md font-semibold mb-2 text-primary">AI's Answer:</h3>
-                <div className="p-3 border rounded-md bg-muted/50 min-h-[100px] prose-sm max-w-none overflow-x-auto">
+                <div className="p-3 border rounded-md bg-muted/50 min-h-[100px] prose-sm max-w-none">
                   <LatexRenderer latexString={aiAnswer.answer} />
                 </div>
             </CardContent>
@@ -219,8 +219,8 @@ export default function StudentDashboardPage() {
                 <Image 
                     src={course.image} 
                     alt={`${course.title} placeholder image`} 
-                    fill // Changed from layout="fill" to fill for Next 13+
-                    style={{objectFit: "cover"}} // Added style for objectFit
+                    fill 
+                    style={{objectFit: "cover"}} 
                     className="rounded-t-lg"
                     data-ai-hint={course.imageHint}
                 />
