@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel as RHFFormLabel } from "@/components/ui/form"; // Renamed FormLabel to avoid conflict
+import { Label } from "@/components/ui/label"; // Import basic Label
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, CheckCircle, Save, UsersRound, ClipboardEdit, FileText, Share2 } from "lucide-react";
 
@@ -288,14 +289,16 @@ export default function ClassListsPage() {
           <CardTitle className="font-headline flex items-center"><FileText className="mr-2 h-5 w-5 text-primary" />Select Course & Assessment</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormItem>
-            <FormLabel>My Courses</FormLabel>
-            <Select onValueChange={handleCourseChange} value={selectedCourseId} disabled={isLoadingCourses}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingCourses ? "Loading courses..." : "Select a course"} />
-                </SelectTrigger>
-              </FormControl>
+          <div className="space-y-2">
+            <Label htmlFor="courseSelect">My Courses</Label>
+            <Select 
+              onValueChange={handleCourseChange} 
+              value={selectedCourseId} 
+              disabled={isLoadingCourses}
+            >
+              <SelectTrigger id="courseSelect">
+                <SelectValue placeholder={isLoadingCourses ? "Loading courses..." : "Select a course"} />
+              </SelectTrigger>
               <SelectContent>
                 {!isLoadingCourses && courses.length === 0 && <SelectItem value="NO_COURSES_DUMMY_VALUE" disabled>No courses found</SelectItem>}
                 {courses.map(course => (
@@ -303,38 +306,36 @@ export default function ClassListsPage() {
                 ))}
               </SelectContent>
             </Select>
-          </FormItem>
+          </div>
           
-          <FormItem>
-            <FormLabel>Assessment for Selected Course</FormLabel>
+          <div className="space-y-2">
+            <Label htmlFor="assessmentSelect">Assessment for Selected Course</Label>
             <Select 
               onValueChange={(value) => setSelectedAssessmentId(value)} 
               value={selectedAssessmentId} 
               disabled={!selectedCourseId || isLoadingAssessments || assessments.length === 0}
             >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    !selectedCourseId ? "Select a course first" : 
-                    isLoadingAssessments ? "Loading assessments..." :
-                    assessments.length === 0 ? "No assessments for this course" :
-                    "Select an assessment"
-                  } />
-                </SelectTrigger>
-              </FormControl>
+              <SelectTrigger id="assessmentSelect">
+                <SelectValue placeholder={
+                  !selectedCourseId ? "Select a course first" : 
+                  isLoadingAssessments ? "Loading assessments..." :
+                  assessments.length === 0 ? "No assessments for this course" :
+                  "Select an assessment"
+                } />
+              </SelectTrigger>
               <SelectContent>
                   {assessments.map(assessment => (
                   <SelectItem key={assessment.id} value={assessment.id}>{assessment.title} (Max: {assessment.totalMarks})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </FormItem>
+          </div>
         </CardContent>
       </Card>
 
       {selectedCourseId && (
         <div className="space-y-6">
-          <Form {...resourceForm} key={`resource-form-${selectedCourseId || 'EMPTY_COURSE_KEY'}`}>
+          <Form {...resourceForm} key={`resource-form-${selectedCourseId || 'EMPTY_COURSE'}`}>
             <form onSubmit={resourceForm.handleSubmit(onResourceSubmit)}>
               <Card className="shadow-lg">
                 <CardHeader>
@@ -347,7 +348,7 @@ export default function ClassListsPage() {
                     name="videoLinksString"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Video URLs (comma-separated)</FormLabel>
+                        <RHFFormLabel>Video URLs (comma-separated)</RHFFormLabel>
                         <FormControl>
                           <Textarea placeholder="e.g., https://youtu.be/..., https://vimeo.com/..." {...field} className="min-h-[80px]" disabled={isLoadingResources} />
                         </FormControl>
@@ -360,7 +361,7 @@ export default function ClassListsPage() {
                     name="imageLinksString"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Image URLs (comma-separated)</FormLabel>
+                        <RHFFormLabel>Image URLs (comma-separated)</RHFFormLabel>
                         <FormControl>
                           <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.png" {...field} className="min-h-[80px]" disabled={isLoadingResources} />
                         </FormControl>
@@ -380,7 +381,7 @@ export default function ClassListsPage() {
           </Form>
 
           {selectedAssessmentId && students.length > 0 && (
-             <Form {...gradingForm} key={`grading-form-${selectedCourseId || 'EMPTY_COURSE_GRADING_KEY'}-${selectedAssessmentId || 'EMPTY_ASSESSMENT_KEY'}`}>
+             <Form {...gradingForm} key={`grading-form-${selectedCourseId || 'EMPTY_COURSE_GRADING'}-${selectedAssessmentId || 'EMPTY_ASSESSMENT'}`}>
               <form onSubmit={gradingForm.handleSubmit(onGradingSubmit)}>
                 <Card className="shadow-lg">
                   <CardHeader>
