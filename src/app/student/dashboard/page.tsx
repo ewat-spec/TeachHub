@@ -5,8 +5,8 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle, UserCircle, Megaphone, Award, Activity, Briefcase, Navigation, Sparkles as SkillsSparkles } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle, UserCircle, Megaphone, Award, Activity, Briefcase, Navigation, Sparkles as SkillsSparkles, CalendarClock, CalendarDays, Clock } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,6 +19,8 @@ import { getAiAcademicHelp, submitStudentQuestionToTrainer } from "./actions";
 import type { AskAcademicQuestionOutput } from "@/ai/flows/ask-academic-question-flow";
 import { LatexRenderer } from "@/components/common/LatexRenderer";
 import { Badge } from "@/components/ui/badge";
+import { differenceInDays, format, isFuture, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const mockStudent = {
   id: "studentAlexDemo",
@@ -26,25 +28,49 @@ const mockStudent = {
   admissionNumber: "SCT221-0077/2024",
   course: "Automotive Engineering",
   yearOfStudy: "Year 2",
-  profilePicUrl: "https://placehold.co/120x120.png", // Slightly larger
-  mockSkills: ["Engine Diagnostics", "CAD Software Basics", "Workshop Safety", "Problem Solving"],
+  profilePicUrl: "https://placehold.co/120x120.png",
+  mockSkills: ["Engine Diagnostics", "CAD Software Basics", "Workshop Safety", "Problem Solving", "Technical Drawing"],
   careerLinks: [
     { title: "Explore Automotive Careers", url: "#" , icon: <Briefcase className="h-4 w-4 mr-2"/> },
     { title: "Latest Auto Industry News", url: "#", icon: <Navigation className="h-4 w-4 mr-2"/> },
+    { title: "Professional Certifications Guide", url: "#", icon: <Award className="h-4 w-4 mr-2"/> },
   ]
 };
 
-const mockCourses = [
-  { id: "unit1", title: "Engine Systems", code: "AUT201", poeProgress: 75, credits: 15, teacher: "Mr. Harrison", poeStatus: "Partially Submitted", image: "https://placehold.co/600x400.png", imageHint: "engine mechanics repair" },
-  { id: "unit2", title: "Vehicle Electrical Systems", code: "AUT202", poeProgress: 40, credits: 12, teacher: "Ms. Electra", poeStatus: "Pending Submission", image: "https://placehold.co/600x400.png", imageHint: "car electrics circuitry" },
-  { id: "unit3", title: "Workshop Safety & Practice", code: "AUT203", poeProgress: 100, credits: 10, teacher: "Mr. Safety", poeStatus: "Completed & Verified", image: "https://placehold.co/600x400.png", imageHint: "workshop safety gear" },
-  { id: "unit4", title: "Automotive Materials Science", code: "AUT204", poeProgress: 10, credits: 10, teacher: "Dr. Metalloid", poeStatus: "Not Started", image: "https://placehold.co/600x400.png", imageHint: "metal gears components" },
+interface MockCourse {
+  id: string;
+  title: string;
+  code: string;
+  poeProgress: number;
+  credits: number;
+  teacher: string;
+  poeStatus: string;
+  image: string;
+  imageHint: string;
+  poeDueDate?: string | null; // ISO string for due date
+}
+
+const mockCourses: MockCourse[] = [
+  { id: "unit1", title: "Engine Systems", code: "AUT201", poeProgress: 75, credits: 15, teacher: "Mr. Harrison", poeStatus: "Partially Submitted", image: "https://placehold.co/600x400.png", imageHint: "engine mechanics repair", poeDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "unit2", title: "Vehicle Electrical Systems", code: "AUT202", poeProgress: 40, credits: 12, teacher: "Ms. Electra", poeStatus: "Pending Submission", image: "https://placehold.co/600x400.png", imageHint: "car electrics circuitry", poeDueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "unit3", title: "Workshop Safety & Practice", code: "AUT203", poeProgress: 100, credits: 10, teacher: "Mr. Safety", poeStatus: "Completed & Verified", image: "https://placehold.co/600x400.png", imageHint: "workshop safety gear", poeDueDate: null },
+  { id: "unit4", title: "Automotive Materials Science", code: "AUT204", poeProgress: 10, credits: 10, teacher: "Dr. Metalloid", poeStatus: "Not Started", image: "https://placehold.co/600x400.png", imageHint: "metal gears components", poeDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "unit5", title: "Advanced Diagnostics", code: "AUT301", poeProgress: 0, credits: 15, teacher: "Mr. Harrison", poeStatus: "Not Started", image: "https://placehold.co/600x400.png", imageHint: "diagnostic tools automotive", poeDueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString() }, // Due tomorrow
 ];
 
-const mockAnnouncements = [
-    {id: "ann1", title: "Upcoming Practical Assessment for AUT201", date: "2024-10-15", content: "All Year 2 Automotive students are reminded about the practical assessment for Engine Systems scheduled next week. Check the portal for details.", type: "alert"},
-    {id: "ann2", title: "Guest Lecture: Future of EV Technology", date: "2024-10-10", content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday in the Main Hall.", type: "info"},
-    {id: "ann3", title: "PoE Submission Deadline Approaching", date: "2024-10-08", content: "Final deadline for AUT202 PoE submissions is Oct 20th. Ensure all evidence is uploaded.", type: "reminder"},
+interface MockAnnouncement {
+    id: string;
+    title: string;
+    date: string; // ISO string for when it was posted
+    content: string;
+    type: "alert" | "info" | "reminder";
+    dueDate?: string | null; // ISO string for any associated deadline
+}
+
+const mockAnnouncements: MockAnnouncement[] = [
+    {id: "ann1", title: "Practical Assessment: Engine Systems (AUT201)", date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), content: "The practical assessment for AUT201 is next week. Ensure all pre-assessment tasks are completed.", type: "alert", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()},
+    {id: "ann2", title: "Guest Lecture: EV Technology", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday.", type: "info", dueDate: null},
+    {id: "ann3", title: "Reminder: PoE Submission for AUT202", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), content: `PoE for Vehicle Electrical Systems is due on ${format(parseISO(mockCourses.find(c => c.id === 'unit2')?.poeDueDate || new Date()), "MMM dd")}.`, type: "reminder", dueDate: mockCourses.find(c => c.id === 'unit2')?.poeDueDate},
 ];
 
 const aiQuestionFormSchema = z.object({
@@ -103,7 +129,7 @@ export default function StudentDashboardPage() {
         }
       });
       setAiAnswer(result);
-      aiForm.reset(); // Clear form after submission
+      aiForm.reset(); 
     } catch (error) {
       toast({
         title: "AI Helper Error",
@@ -153,13 +179,59 @@ export default function StudentDashboardPage() {
     }
   };
 
+  const upcomingDeadlines = useMemo(() => {
+    if (!isClient) return [];
+    const today = new Date();
+    const items = [];
+
+    // PoE Deadlines from courses
+    mockCourses.forEach(course => {
+      if (course.poeDueDate && isFuture(parseISO(course.poeDueDate)) && course.poeStatus !== "Completed & Verified") {
+        const dueDate = parseISO(course.poeDueDate);
+        const daysLeft = differenceInDays(dueDate, today);
+        if (daysLeft <= 10) { // Show deadlines within the next 10 days
+          items.push({
+            id: `course-${course.id}`,
+            title: `${course.title} PoE`,
+            dueDate,
+            daysLeft,
+            type: "poe" as const,
+          });
+        }
+      }
+    });
+
+    // Deadlines from announcements
+    mockAnnouncements.forEach(ann => {
+      if (ann.dueDate && isFuture(parseISO(ann.dueDate)) && (ann.type === 'alert' || ann.type === 'reminder')) {
+        const dueDate = parseISO(ann.dueDate);
+        const daysLeft = differenceInDays(dueDate, today);
+        if (daysLeft <= 10) {
+            // Avoid duplicating if it's already covered by a PoE deadline for the same thing
+            if (!items.some(item => item.title.includes(ann.title.split(':')[0]) && item.type === "poe")) {
+                 items.push({
+                    id: `ann-${ann.id}`,
+                    title: ann.title,
+                    dueDate,
+                    daysLeft,
+                    type: "announcement" as const,
+                 });
+            }
+        }
+      }
+    });
+    return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  }, [isClient]);
+
+
   if (!isClient) {
     return (
       <div className="space-y-8 animate-pulse">
         <div className="h-12 bg-muted rounded w-3/4"></div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-1 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
-            <Card className="lg:col-span-2 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
+            <Card className="lg:col-span-1 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
+            <Card className="lg:col-span-1 shadow-xl"><CardContent className="h-60 bg-muted rounded p-4"></CardContent></Card>
         </div>
         <Card className="shadow-xl"><CardContent className="h-40 bg-muted rounded p-4"></CardContent></Card>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -203,23 +275,42 @@ export default function StudentDashboardPage() {
 
         <Card className="lg:col-span-2 shadow-xl hover:shadow-accent/10 transition-shadow">
             <CardHeader className="border-b pb-3">
-                <CardTitle className="font-headline text-xl flex items-center text-accent-foreground"><Megaphone className="mr-2 h-6 w-6 text-accent" />Latest Announcements</CardTitle>
+                <CardTitle className="font-headline text-xl flex items-center text-accent-foreground"><CalendarClock className="mr-2 h-6 w-6 text-accent" />Upcoming Deadlines & Reminders</CardTitle>
+                <CardDescription>Stay on top of your tasks for the next 10 days.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 space-y-3 max-h-[280px] overflow-y-auto">
-                {mockAnnouncements.length > 0 ? mockAnnouncements.map(ann => (
-                    <div key={ann.id} className="p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-start">
-                            {getAnnouncementIcon(ann.type)}
-                            <div>
-                                <h4 className="font-semibold text-md text-foreground">{ann.title}</h4>
-                                <p className="text-xs text-muted-foreground mb-1">Posted: {ann.date}</p>
-                            </div>
+            <CardContent className="pt-4 space-y-2 max-h-[280px] overflow-y-auto">
+                {upcomingDeadlines.length > 0 ? upcomingDeadlines.map(item => (
+                    <div key={item.id} className={cn(
+                        "p-3 border rounded-lg flex items-start gap-3 hover:bg-muted/40 transition-colors",
+                        item.daysLeft <= 1 && "border-destructive/50 bg-destructive/10",
+                        item.daysLeft > 1 && item.daysLeft <= 3 && "border-yellow-500/50 bg-yellow-500/10"
+                    )}>
+                        {item.daysLeft <= 1 ? <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0"/> : 
+                         item.daysLeft <= 3 ? <Clock className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0"/> :
+                         <CalendarDays className="h-5 w-5 text-primary mt-0.5 flex-shrink-0"/>}
+                        <div>
+                            <h4 className={cn(
+                                "font-semibold text-md",
+                                item.daysLeft <=1 && "text-destructive-foreground",
+                                item.daysLeft > 1 && item.daysLeft <= 3 && "text-yellow-700"
+                            )}>{item.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                                Due: {format(item.dueDate, "MMM dd, yyyy")}
+                                <span className={cn(
+                                    "font-medium ml-1",
+                                    item.daysLeft <= 1 && "text-destructive-foreground",
+                                    item.daysLeft > 1 && item.daysLeft <= 3 && "text-yellow-700",
+                                    item.daysLeft > 3 && "text-primary"
+                                )}>
+                                    ({item.daysLeft === 0 ? "Today!" : item.daysLeft === 1 ? "Tomorrow!" : `in ${item.daysLeft} days`})
+                                </span>
+                            </p>
                         </div>
-                        <p className="text-sm text-muted-foreground ml-7">{ann.content}</p>
                     </div>
-                )) : <p className="text-muted-foreground text-center py-4">No recent announcements.</p>}
+                )) : <p className="text-muted-foreground text-center py-4">No immediate deadlines in the next 10 days. Great job staying ahead, or check your full schedule!</p>}
             </CardContent>
         </Card>
+
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -230,9 +321,9 @@ export default function StudentDashboardPage() {
             </CardHeader>
             <CardContent className="pt-4 space-y-2">
                 {mockStudent.mockSkills.length > 0 ? (
-                    <ul className="grid grid-cols-2 gap-2">
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {mockStudent.mockSkills.map((skill, index) => (
-                        <li key={index} className="flex items-center text-sm">
+                        <li key={index} className="flex items-center text-sm p-1 hover:bg-muted/30 rounded">
                             <Award className="h-4 w-4 mr-2 text-yellow-500 flex-shrink-0"/>
                             <span className="text-muted-foreground">{skill}</span>
                         </li>
@@ -249,7 +340,7 @@ export default function StudentDashboardPage() {
                 <CardTitle className="font-headline text-xl flex items-center text-primary"><Navigation className="mr-2 h-6 w-6"/>Career Compass (Mock)</CardTitle>
                 <CardDescription>Explore industry insights related to your field.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="pt-4 space-y-1">
                  {mockStudent.careerLinks.map((link, index) => (
                     <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center p-2 rounded-md hover:bg-muted transition-colors text-sm text-primary hover:underline">
                         {link.icon} {link.title}
@@ -313,13 +404,16 @@ export default function StudentDashboardPage() {
     </Card>
 
       <section>
-        <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
-            <BookOpen className="mr-3 h-7 w-7"/>My Courses & Portfolio of Evidence
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2"> {/* Changed to 2-col for XL to make cards bigger */}
-          {mockCourses.map((course) => (
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-headline font-semibold text-primary flex items-center">
+                <BookOpen className="mr-3 h-7 w-7"/>My Courses & Portfolio of Evidence
+            </h2>
+             <Button variant="link" className="text-sm">View All Courses &rarr;</Button>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
+          {mockCourses.slice(0,2).map((course) => ( // Show only first 2 for brevity on dashboard
             <Card key={course.id} className="shadow-lg hover:shadow-primary/20 transition-shadow duration-300 flex flex-col bg-card">
-              <div className="relative h-48 w-full"> {/* Increased image height */}
+              <div className="relative h-48 w-full">
                 <Image 
                     src={course.image} 
                     alt={`${course.title} course image`} 
@@ -333,6 +427,12 @@ export default function StudentDashboardPage() {
                 <CardTitle className="font-headline text-xl text-primary">{course.title}</CardTitle>
                 <CardDescription>Code: {course.code} | Credits: {course.credits}</CardDescription>
                 <CardDescription>Trainer: {course.teacher}</CardDescription>
+                 {course.poeDueDate && course.poeStatus !== "Completed & Verified" && isFuture(parseISO(course.poeDueDate)) && (
+                    <Badge variant={differenceInDays(parseISO(course.poeDueDate), new Date()) <= 3 ? "destructive" : "secondary"} className="mt-1 w-fit">
+                        <CalendarClock className="mr-1.5 h-3.5 w-3.5"/>
+                        PoE Due: {format(parseISO(course.poeDueDate), "MMM dd")}
+                    </Badge>
+                )}
               </CardHeader>
               <CardContent className="flex-grow space-y-3 pt-4">
                 <div>
@@ -372,6 +472,28 @@ export default function StudentDashboardPage() {
           ))}
         </div>
       </section>
+      
+    <Card className="lg:col-span-2 shadow-xl hover:shadow-accent/10 transition-shadow mt-8">
+        <CardHeader className="border-b pb-3">
+            <CardTitle className="font-headline text-xl flex items-center text-accent-foreground"><Megaphone className="mr-2 h-6 w-6 text-accent" />General Announcements</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-3 max-h-[280px] overflow-y-auto">
+            {mockAnnouncements.length > 0 ? mockAnnouncements.filter(ann => ann.type === 'info').map(ann => ( // Filter for general info
+                <div key={ann.id} className="p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start">
+                        {getAnnouncementIcon(ann.type)}
+                        <div>
+                            <h4 className="font-semibold text-md text-foreground">{ann.title}</h4>
+                            <p className="text-xs text-muted-foreground mb-1">Posted: {format(parseISO(ann.date), "MMM dd, yyyy")}</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground ml-7">{ann.content}</p>
+                </div>
+            )) : <p className="text-muted-foreground text-center py-4">No general announcements.</p>}
+            {mockAnnouncements.filter(ann => ann.type === 'info').length === 0 && <p className="text-muted-foreground text-center py-4">No general announcements at this time.</p>}
+        </CardContent>
+    </Card>
+
 
       <section className="mt-12">
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
