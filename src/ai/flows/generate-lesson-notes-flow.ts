@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { askWolframAlpha } from '@/ai/tools/wolframAlphaTool';
+// Removed: import { askWolframAlpha } from '@/ai/tools/wolframAlphaTool';
 
 const GenerateLessonNotesInputSchema = z.object({
   lessonTopic: z
@@ -53,7 +53,7 @@ export async function generateLessonNotes(
 
 const prompt = ai.definePrompt({
   name: 'generateLessonNotesPrompt',
-  tools: [askWolframAlpha],
+  // Removed: tools: [askWolframAlpha],
   input: {schema: GenerateLessonNotesInputSchema},
   output: {schema: GenerateLessonNotesOutputSchema},
   prompt: `You are an expert AI assistant tasked with creating **exceptionally comprehensive, detailed, technically accurate, and profoundly human-friendly** lesson notes for trainers across a wide range of college-level subjects, including theoretical, technical, and vocational fields.
@@ -102,8 +102,7 @@ Desired NoteFormat: {{{noteFormat}}}
     *   **DECONSTRUCT FORMULAS (for the {{{studentAudience}}}):** When a formula is introduced (e.g., for an integral like $\\int_0^\\infty f(t) e^{-st} dt$, a transform, a series), explain *each part* of the formula conceptually, in plain language relevant to their field. For the Laplace integral: explain what $f(t)$ represents (e.g., a time-varying voltage, a mechanical displacement for *their* systems), what $e^{-st}$ represents (a decaying exponential 'weighting' or 'testing' function, where $s$ is a complex frequency related to system characteristics), what the integral symbol $\\int$ itself means (summing up an infinite number of tiny pieces), and what $F(s)$ (the result) signifies (a representation of $f(t)$ in the 's-domain' or frequency domain, which might simplify analysis of system stability or frequency response for *their* specific systems).
     *   **USE LATEX FOR ALL MATH:** **ALL** mathematical formulas, equations, expressions, individual variables (e.g., $x$, $y$, $s$, $t$), and symbols (e.g., $\\alpha$, $\\beta$, $\\int$, $\\sum$) **MUST** use LaTeX syntax. For inline math, use $...$. For display/block math, use $$...$$. Example: $F(s) = \\mathcal{L} \\{f(t)\\} = \\int_0^{\\infty} f(t)e^{-st} dt$. Another example for a polygon's angle sum: $(n-2) \\times 180^{\\circ}$.
     *   **ILLUSTRATIVE EXAMPLES (for the {{{studentAudience}}}):** Offer multiple examples with fully worked-out solutions, meticulously explaining the reasoning behind each step of the solution, using scenarios familiar to the {{{studentAudience}}}.
-    *   **Wolfram Alpha Tool Usage**: If you need to perform a specific calculation, verify a formula, get properties of a mathematical function, obtain a step-by-step solution for an equation, or generate data for a plot to include in the explanation, consider using the 'askWolframAlpha' tool. Phrase your query to the tool clearly (e.g., "derivative of x^3 * sin(x)", "solve x^2 + 5x + 6 = 0 for x", "plot y = x^2 from x = -5 to 5"). Incorporate the tool's textual output meaningfully into your explanation. If the tool provides a placeholder message indicating it's not fully implemented, acknowledge this briefly if it makes sense in the flow of explanation, or simply proceed with your best general explanation.
-
+    
 -   **For Technical Drawing or Engineering Drawing topics (e.g., Orthographic Projection, Isometric Drawing, Dimensioning, CAD basics - always tailor to {{{studentAudience}}}):**
     *   Provide detailed, easy-to-follow descriptions of visual elements, components, or drawing conventions, explaining their purpose *within the context of the {{{studentAudience}}}'s field* (e.g., explain dimensioning rules with examples of mechanical parts for mechanical students, or circuit board layouts for electrical students if applicable).
     *   Explain principles (e.g., types of lines, projection methods, sectioning) with utmost clarity, using simple terms and visualizable examples relevant to their domain.

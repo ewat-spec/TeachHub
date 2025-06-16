@@ -5,6 +5,6 @@ config(); // Load environment variables from .env file
 import '@/ai/flows/suggest-lesson-plan-elements.ts';
 import '@/ai/flows/generate-lesson-notes-flow.ts';
 import '@/ai/flows/analyze-timetable-flow.ts';
-import '@/ai/tools/wolframAlphaTool.ts';
+// Removed: import '@/ai/tools/wolframAlphaTool.ts';
 import '@/ai/flows/ask-academic-question-flow.ts'; // Import the new flow
 
