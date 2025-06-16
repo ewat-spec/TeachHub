@@ -15,7 +15,8 @@ import { z } from "zod";
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getAiTimetableAnalysis } from "@/app/trainer/schedule/actions";
+// Corrected import path
+import { getAiTimetableAnalysis } from "@/app/(app)/schedule/actions"; 
 import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
 
 // Mock data - In a real app, this would come from a central service or database
@@ -56,7 +57,7 @@ export default function TimetablerDashboardPage() {
   const curriculumUiForm = useForm<CurriculumFormValues>({
     resolver: zodResolver(curriculumFormSchema),
     defaultValues: {
-      guidelines: "E.g., Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes. Trainer John Smith is unavailable on Friday afternoons.",
+      guidelines: "E.g., Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes. Trainer John Smith is unavailable on Friday afternoons. Common course 'COM101' for all Year 1 students must be on Wednesday afternoon.",
     },
      mode: "onChange",
   });
@@ -91,12 +92,16 @@ export default function TimetablerDashboardPage() {
           description="Tools for creating, managing, and analyzing institution timetables."
         />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1,2,3].map(i => (
-                 <Card key={i} className="shadow-lg animate-pulse">
-                    <CardHeader><div className="h-6 bg-muted rounded w-3/4"></div></CardHeader>
-                    <CardContent><div className="h-24 bg-muted rounded"></div></CardContent>
-                </Card>
-            ))}
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="shadow-lg animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-muted rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-24 bg-muted rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -129,7 +134,7 @@ export default function TimetablerDashboardPage() {
         <Card className="shadow-lg lg:col-span-2">
           <CardHeader>
               <CardTitle className="font-headline flex items-center"><Brain className="mr-2 h-6 w-6 text-primary" /> AI Timetable Analysis</CardTitle>
-              <CardDescription>Get AI-powered feedback on the institution's schedule based on curriculum guidelines.</CardDescription>
+              <CardDescription>Get AI-powered feedback on the institution's schedule based on curriculum guidelines. Clearly define common courses and their target student groups in the guidelines for accurate analysis.</CardDescription>
           </CardHeader>
           <Form {...curriculumUiForm}>
               <form onSubmit={curriculumUiForm.handleSubmit(handleAnalyzeTimetable)}>
@@ -142,7 +147,7 @@ export default function TimetablerDashboardPage() {
                               <FormLabel>Curriculum Guidelines & Notes</FormLabel>
                               <FormControl>
                                   <Textarea
-                                  placeholder="Describe subject priorities, required hours, preferred times, constraints (e.g., trainer availability, venue capacities)..."
+                                  placeholder="Describe subject priorities, required hours, preferred times, constraints (e.g., trainer availability, venue capacities, common course rules)..."
                                   className="min-h-[120px] resize-y"
                                   {...field}
                                   />
@@ -289,6 +294,8 @@ export default function TimetablerDashboardPage() {
     </div>
   );
 }
+    
+
     
 
     
