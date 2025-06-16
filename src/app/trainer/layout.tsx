@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -19,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit } from "lucide-react";
+import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit, MessageCircle } from "lucide-react"; // Added MessageCircle
 
 interface NavItem {
   href: string;
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { href: "/trainer/assessments", icon: <ClipboardCheck />, label: "My Assessments", tooltip: "My Assessments & CATs" },
   { href: "/trainer/class-lists", icon: <ClipboardEdit />, label: "Class Lists & Grading", tooltip: "Manage Class Lists and Student Grades" },
   { href: "/trainer/portfolios", icon: <FolderKanban />, label: "Student Portfolios", tooltip: "Student Portfolios of Evidence" },
+  { href: "/trainer/student-questions", icon: <MessageCircle />, label: "Student Questions", tooltip: "View Questions from Students" },
   { href: "/trainer/notifications", icon: <Bell />, label: "My Notifications", tooltip: "My Notifications" },
 ];
 
@@ -72,7 +74,11 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
         <SidebarContent className="p-0">
           <ScrollArea className="h-full">
             <SidebarMenu className="p-2">
-              {navItems.map((item) => (
+              {navItems.sort((a,b) => { // Keep notifications last
+                if (a.label === "My Notifications") return 1;
+                if (b.label === "My Notifications") return -1;
+                return 0;
+              }).map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href}>
                     <SidebarMenuButton

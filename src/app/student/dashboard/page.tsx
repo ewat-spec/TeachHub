@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2 } from "lucide-react";
+import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle } from "lucide-react"; // Added MessageCircle
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,12 +14,15 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog"; // Added Dialog components
 import { getAiAcademicHelp } from "./actions";
+import { submitStudentQuestionToTrainer } from "./actions"; // New action
 import type { AskAcademicQuestionOutput } from "@/ai/flows/ask-academic-question-flow";
 import { LatexRenderer } from "@/components/common/LatexRenderer";
 
 
 const mockStudent = {
+  id: "studentAlexDemo",
   name: "Alex DemoStudent",
   admissionNumber: "SCT221-0077/2024",
   course: "Automotive Engineering",
@@ -44,12 +47,23 @@ const aiQuestionFormSchema = z.object({
 });
 type AiQuestionFormValues = z.infer<typeof aiQuestionFormSchema>;
 
+const trainerQuestionFormSchema = z.object({
+  courseId: z.string(),
+  courseTitle: z.string(), // For display in modal
+  questionToTrainer: z.string().min(10, {message: "Question must be at least 10 characters."}).max(1000, {message: "Question is too long (max 1000 characters)."}),
+});
+type TrainerQuestionFormValues = z.infer<typeof trainerQuestionFormSchema>;
+
 
 export default function StudentDashboardPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [isLoadingAiAnswer, setIsLoadingAiAnswer] = useState(false);
   const [aiAnswer, setAiAnswer] = useState<AskAcademicQuestionOutput | null>(null);
+  const [isTrainerQuestionModalOpen, setIsTrainerQuestionModalOpen] = useState(false);
+  const [currentCourseForQuestion, setCurrentCourseForQuestion] = useState<{id: string; title: string} | null>(null);
+  const [isSubmittingTrainerQuestion, setIsSubmittingTrainerQuestion] = useState(false);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -58,6 +72,12 @@ export default function StudentDashboardPage() {
   const aiForm = useForm<AiQuestionFormValues>({
     resolver: zodResolver(aiQuestionFormSchema),
     defaultValues: { question: "" },
+    mode: "onChange",
+  });
+  
+  const trainerQuestionForm = useForm<TrainerQuestionFormValues>({
+    resolver: zodResolver(trainerQuestionFormSchema),
+    defaultValues: { courseId: "", courseTitle: "", questionToTrainer: "" },
     mode: "onChange",
   });
 
@@ -87,6 +107,36 @@ export default function StudentDashboardPage() {
       });
     } finally {
       setIsLoadingAiAnswer(false);
+    }
+  };
+
+  const handleOpenTrainerQuestionModal = (course: {id: string; title: string}) => {
+    setCurrentCourseForQuestion(course);
+    trainerQuestionForm.reset({ courseId: course.id, courseTitle: course.title, questionToTrainer: "" });
+    setIsTrainerQuestionModalOpen(true);
+  };
+
+  const onSubmitTrainerQuestion = async (data: TrainerQuestionFormValues) => {
+    setIsSubmittingTrainerQuestion(true);
+    try {
+      // In a real app, studentId would come from auth context
+      const result = await submitStudentQuestionToTrainer({
+        studentId: mockStudent.id,
+        studentName: mockStudent.name,
+        courseId: data.courseId,
+        courseTitle: data.courseTitle,
+        questionText: data.questionToTrainer
+      });
+      if (result.success) {
+        toast({ title: "Question Sent!", description: `Your question about ${data.courseTitle} has been sent to your trainer.`});
+        setIsTrainerQuestionModalOpen(false);
+      } else {
+        toast({ title: "Error Sending Question", description: result.message || "Could not send your question.", variant: "destructive" });
+      }
+    } catch (error) {
+       toast({ title: "Submission Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setIsSubmittingTrainerQuestion(false);
     }
   };
 
@@ -154,7 +204,6 @@ export default function StudentDashboardPage() {
         </Card>
     </div>
 
-    {/* AI Academic Helper Card */}
     <Card className="shadow-xl">
         <CardHeader>
             <CardTitle className="font-headline flex items-center">
@@ -207,7 +256,6 @@ export default function StudentDashboardPage() {
         )}
     </Card>
 
-
       <section>
         <h2 className="text-2xl font-headline font-semibold mb-4 text-primary flex items-center">
             <BookOpen className="mr-3 h-7 w-7"/>My Courses & Portfolio of Evidence
@@ -240,12 +288,20 @@ export default function StudentDashboardPage() {
                   <p className="text-xs text-muted-foreground mt-1">Status: {course.poeStatus}</p>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row justify-center gap-2 pt-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => handlePoeAction(course.title, "view")}>
+              <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 border-t">
+                <Button variant="outline" size="sm" onClick={() => handlePoeAction(course.title, "view")} className="sm:col-span-1">
                   <Eye className="mr-2 h-4 w-4" /> View PoE
                 </Button>
-                <Button variant="default" size="sm" onClick={() => handlePoeAction(course.title, "upload")} disabled={course.poeProgress === 100}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> Upload Evidence
+                <Button variant="default" size="sm" onClick={() => handlePoeAction(course.title, "upload")} disabled={course.poeProgress === 100} className="sm:col-span-1">
+                  <UploadCloud className="mr-2 h-4 w-4" /> Upload
+                </Button>
+                 <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => handleOpenTrainerQuestionModal({id: course.id, title: course.title})}
+                    className="sm:col-span-1"
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" /> Ask Trainer
                 </Button>
               </CardFooter>
             </Card>
@@ -266,6 +322,53 @@ export default function StudentDashboardPage() {
             </CardContent>
         </Card>
       </section>
+
+      {currentCourseForQuestion && (
+        <Dialog open={isTrainerQuestionModalOpen} onOpenChange={setIsTrainerQuestionModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                 <Form {...trainerQuestionForm}>
+                    <form onSubmit={trainerQuestionForm.handleSubmit(onSubmitTrainerQuestion)}>
+                        <DialogHeader>
+                            <DialogTitle className="font-headline">Ask Your Trainer</DialogTitle>
+                            <DialogDescription>
+                                Your question regarding "<strong>{currentCourseForQuestion.title}</strong>" will be sent to your trainer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                             <FormField
+                                control={trainerQuestionForm.control}
+                                name="questionToTrainer"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel htmlFor="questionToTrainerText">Your Question:</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            id="questionToTrainerText"
+                                            placeholder="Type your question here... e.g., Could you clarify the deadline for Assignment 2? I'm unsure about the requirements for section B."
+                                            className="min-h-[120px]"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={isSubmittingTrainerQuestion}>
+                                {isSubmittingTrainerQuestion ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
+                                Send Question
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                 </Form>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
