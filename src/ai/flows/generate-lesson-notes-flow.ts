@@ -79,16 +79,16 @@ Key Points to Cover (elaborate on each extensively, providing significant depth 
 
 Desired NoteFormat: {{{noteFormat}}}
 
-**General Instructions for Explanations (ESPECIALLY for technical and mathematical content):**
+**General Instructions for Explanations (ESPECIALLY for technical and mathematical content, but applicable to ALL subjects):**
 1.  **Start with the 'Why' and 'What':** Before diving into details or formulas, always explain the core concept in simple terms. Why is this topic important for the {{{studentAudience}}}? What problem does it solve for them? What is the main idea in plain language?
 2.  **Use Analogies:** For abstract concepts, use relatable analogies tailored to the {{{studentAudience}}}. For example, explaining electricity flow using water in pipes, or complex data structures using everyday organizational systems.
-3.  **Define Terms Clearly:** If a technical term or jargon is unavoidable, define it immediately in simple, clear language. If a simpler word or phrasing exists that conveys the same meaning accurately, prefer it.
+3.  **Define Terms Clearly:** If a technical or specialized term or jargon is unavoidable, define it immediately in simple, clear language. If a simpler word or phrasing exists that conveys the same meaning accurately, prefer it.
 4.  **Build from Simple to Complex:** Introduce concepts in a logical sequence. Start with foundational ideas and gradually build up to more complex aspects. Don't assume too much prior knowledge beyond what is typical for the {{{studentAudience}}}.
-5.  **Step-by-Step for Processes:** For procedures, problem-solving techniques, or derivations, provide extremely clear, granular, step-by-step explanations. Explain the reasoning behind *each step*.
+5.  **Step-by-Step for Processes/Arguments:** For procedures, problem-solving techniques, derivations, or the development of an argument, provide extremely clear, granular, step-by-step explanations. Explain the reasoning behind *each step*.
 6.  **Illustrative Examples:** Provide concrete examples that demonstrate the concept. These examples should be relevant to the {{{studentAudience}}}'s field of study or common experiences. Work through examples fully.
 7.  **Human-Friendly Tone:** Write as if you are a patient, knowledgeable, and enthusiastic teacher explaining this to someone eager to learn. Avoid overly dry or academic language where a more conversational or descriptive style would be clearer.
 
-**Specific Instructions for Technical Subjects (always tailor to {{{studentAudience}}})**
+**Specific Instructions for Different Subject Categories (always tailor to {{{studentAudience}}})**
 -   **For Mathematics-related topics (e.g., Algebra, Calculus, Geometry, Trigonometry, Laplace Transforms, Fourier Series, Differential Equations):**
     *   **PRIORITIZE INTUITIVE UNDERSTANDING FOR THE SPECIFIED AUDIENCE ABOVE ALL ELSE.** Before presenting any complex formula or mathematical procedure, you *must* first explain the *'why'* (the purpose, the problem it solves *for them*) and the *'what'* (the core idea) in simple, relatable terms. Use analogies and real-world examples appropriate for the {{{studentAudience}}}. For abstract concepts like integrals, transforms (e.g., Laplace, Fourier), series, or limits, start with a clear, simple analogy or a real-world scenario that makes the concept tangible *for that audience*.
         *   **Laplace Transform Example Intuition (General):** Think of the Laplace Transform as a special toolkit or a language translator. It takes a complicated problem that changes over time (often described by tricky differential equations) and 'transforms' it into a new 'language' (the 's-domain') where it becomes a much simpler algebra problem. After you solve it in this simpler language, you transform it back to see how your system behaves in real time.
@@ -105,7 +105,15 @@ Desired NoteFormat: {{{noteFormat}}}
     *   Explain principles (e.g., types of lines, projection methods, sectioning) with utmost clarity, using simple terms and visualizable examples relevant to their domain.
     *   Outline steps for creating specific types of drawings or using particular techniques in a very structured, easy-to-reproduce manner, focusing on applications relevant to the {{{studentAudience}}}.
     *   Suggest practical exercises or examples pertinent to their field (e.g., for automotive students: "Describe, step-by-step, how to draw a first-angle orthographic projection of a simple engine component, explaining what each view represents," or for electrical students: "Explain the fundamental rules for dimensioning a PCB layout, as if to a beginner, and why these rules are important for manufacturing.").
--   **For other technical subjects:** Adapt the level of detail, examples, and explanation to the complexity of the topic and the specific needs and background of the {{{studentAudience}}}. Always prioritize exceptional clarity, accuracy, and intuitive understanding for *them*.
+
+-   **For All Other Subjects (including general theoretical, humanities, social sciences, arts, conceptual sciences, etc.):**
+    *   Your primary goal remains to produce **exceptionally comprehensive, detailed, conceptually accurate, and profoundly human-friendly** lesson notes. The "General Instructions for Explanations" provided above are critical here.
+    *   Adapt the level of detail, examples, analogies, and explanations to the complexity of the specific topic and the particular needs and background of the {{{studentAudience}}}.
+    *   For abstract or conceptual subjects, ensure you break down complex ideas into manageable parts. Define key terminology clearly and simply.
+    *   Explore different perspectives, schools of thought, or theories if relevant to the topic. Explain their main arguments and, if appropriate, how they compare or contrast.
+    *   Provide illustrative examples, case studies, scenarios, or thought experiments that make the concepts tangible and relatable to the {{{studentAudience}}}. For example, if discussing economic theories for business students, use business case studies. If discussing pedagogical theories for trainee teachers, use classroom scenarios.
+    *   Prioritize critical thinking and deep understanding. Encourage the development of arguments, analysis of concepts, or application of theories to practical situations (if applicable).
+    *   Always aim for exceptional clarity, accuracy, and intuitive understanding, tailored for *them*. The notes should be directly usable by a trainer to teach a comprehensive lesson.
 
 Please generate the lesson notes now. Ensure the content is rich and covers the topic and key points in significant depth according to the guidelines above, especially tailoring for the {{{studentAudience}}}.
 - If 'detailed-paragraph' format is requested, provide in-depth paragraphs with explanations, examples, and context. For technical subjects, integrate formulas (as LaTeX if math) or detailed descriptions smoothly within these paragraphs, making sure explanations are exceptionally intuitive and human, and relevant to the {{{studentAudience}}}.
@@ -134,3 +142,4 @@ const generateLessonNotesFlow = ai.defineFlow(
     return output!;
   }
 );
+
