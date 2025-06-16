@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A Genkit tool for querying Wolfram Alpha.
  *
