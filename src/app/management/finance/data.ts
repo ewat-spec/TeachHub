@@ -98,7 +98,7 @@ export let mockPaymentsData: PaymentRecord[] = [
 ];
 
 // Helper to calculate financials for a student
-export const calculateStudentFinancials = (studentId: string): { invoices: Invoice[], payments: PaymentRecord[], outstandingBalance: number, totalBilled: number, totalPaid: number } => {
+export const calculateStudentFinancials = async (studentId: string): Promise<{ invoices: Invoice[], payments: PaymentRecord[], outstandingBalance: number, totalBilled: number, totalPaid: number }> => {
   const studentInvoices = mockInvoicesData.filter(inv => inv.studentId === studentId);
   const studentPayments = mockPaymentsData.filter(pay => pay.studentId === studentId);
   
