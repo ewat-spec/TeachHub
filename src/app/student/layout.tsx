@@ -5,22 +5,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { Button } from "@/components/ui/button";
-import { LogOut, UserCircle } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation"; // Added useRouter for logout
+import { LogOut, UserCircle, CreditCard, LayoutDashboard } from "lucide-react"; // Added CreditCard, LayoutDashboard
+import { usePathname, useRouter } from "next/navigation"; 
 
 export default function StudentAppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // For logout
+  const router = useRouter(); 
 
-  // Mock logout function
   const handleLogout = () => {
-    // In a real app, this would clear session, cookies, context, etc.
-    // For prototype, just navigate to login.
     router.push('/student/login'); 
   };
   
-  // A very simple header for the student portal
-  const showHeader = pathname !== '/student/login'; // Don't show header on login page
+  const showHeader = pathname !== '/student/login';
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -31,16 +27,19 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
               <TeachHubLogo className="h-7 w-7" />
               <h1 className="text-xl font-headline font-semibold">Student Portal</h1>
             </Link>
-            <div className="flex flex-1 items-center justify-end space-x-4">
-              <nav className="flex items-center space-x-1">
-                {/* Future student nav items can go here */}
-                 <Button variant="ghost" size="sm" onClick={() => router.push('/student/profile')}> {/* Placeholder profile */}
-                  <UserCircle className="mr-2 h-5 w-5"/> My Profile (Mock)
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-5 w-5"/> Logout
-                </Button>
-              </nav>
+            <div className="flex flex-1 items-center justify-end space-x-1">
+              <Button variant="ghost" size="sm" asChild className={pathname === "/student/dashboard" ? "bg-muted" : ""}>
+                <Link href="/student/dashboard"><LayoutDashboard className="mr-1.5 h-5 w-5"/> Dashboard</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className={pathname.startsWith("/student/finance") ? "bg-muted" : ""}>
+                <Link href="/student/finance"><CreditCard className="mr-1.5 h-5 w-5"/> My Finances</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className={pathname.startsWith("/student/profile") ? "bg-muted" : ""}>
+                <Link href="/student/profile"><UserCircle className="mr-1.5 h-5 w-5"/> My Profile</Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="mr-1.5 h-5 w-5"/> Logout
+              </Button>
             </div>
           </div>
         </header>

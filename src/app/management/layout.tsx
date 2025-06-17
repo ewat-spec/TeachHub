@@ -20,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare } from "lucide-react";
+import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare, Landmark } from "lucide-react"; // Added Landmark
 
 interface NavItem {
   href: string;
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { href: "/management/director", icon: <Briefcase />, label: "Director", tooltip: "Director Dashboard" },
   { href: "/management/hod", icon: <ClipboardList />, label: "HOD", tooltip: "HOD Dashboard" },
   { href: "/management/timetabler", icon: <GanttChartSquare />, label: "Timetabler", tooltip: "Timetabler Dashboard" },
+  { href: "/management/finance", icon: <Landmark />, label: "Finance", tooltip: "Finance Management" },
 ];
 
 function AppSpecificSidebarTitle() {

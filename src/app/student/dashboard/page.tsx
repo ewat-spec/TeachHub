@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle, UserCircle, Megaphone, Award, Activity, Briefcase, Navigation, Sparkles as SkillsSparkles, CalendarClock, CalendarDays, Clock } from "lucide-react";
+import { FileText, UploadCloud, Eye, BarChart2, BookOpen, AlertCircle, Brain, Send, Loader2, MessageCircle, UserCircle, Megaphone, Award, Activity, Briefcase, Navigation, Sparkles as SkillsSparkles, CalendarClock, CalendarDays, Clock, CreditCard } from "lucide-react"; // Added CreditCard
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,7 @@ import { LatexRenderer } from "@/components/common/LatexRenderer";
 import { Badge } from "@/components/ui/badge";
 import { differenceInDays, format, isFuture, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import Link from "next/link"; // Added Link
 
 const mockStudent = {
   id: "studentAlexDemo",
@@ -266,9 +267,9 @@ export default function StudentDashboardPage() {
                 <p><strong className="text-foreground">Course:</strong> <span className="text-muted-foreground">{mockStudent.course}</span></p>
                 <p><strong className="text-foreground">Year/Level:</strong> <span className="text-muted-foreground">{mockStudent.yearOfStudy}</span></p>
                 <Button asChild className="w-full mt-4" variant="outline">
-                  <a href="/student/profile">
+                  <Link href="/student/profile">
                     <UserCircle className="mr-2 h-4 w-4" /> View My Profile
-                  </a>
+                  </Link>
                 </Button>
             </CardContent>
         </Card>
@@ -312,6 +313,23 @@ export default function StudentDashboardPage() {
         </Card>
 
     </div>
+     <Card className="shadow-xl hover:shadow-primary/10 transition-shadow">
+        <CardHeader className="border-b">
+            <CardTitle className="font-headline text-xl flex items-center text-primary"><CreditCard className="mr-2 h-6 w-6"/>My Finances</CardTitle>
+            <CardDescription>Access your fee statements and payment history.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+            <p className="text-sm text-muted-foreground mb-3">
+                Keep track of your financial obligations and payments made to the institution.
+            </p>
+            <Button asChild>
+                <Link href="/student/finance">
+                    Go to My Finances &rarr;
+                </Link>
+            </Button>
+        </CardContent>
+    </Card>
+
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-xl hover:shadow-primary/10 transition-shadow">

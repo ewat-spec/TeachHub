@@ -1,7 +1,7 @@
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Users, Settings } from "lucide-react";
+import { BarChart, Users, Settings, DollarSign } from "lucide-react"; // Added DollarSign
 
 export default function DirectorDashboardPage() {
   return (
@@ -39,6 +39,20 @@ export default function DirectorDashboardPage() {
             </div>
           </CardContent>
         </Card>
+         <Card className="shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xl font-medium">Financial Overview</CardTitle>
+            <DollarSign className="h-6 w-6 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Key institutional financial metrics, budget adherence, and revenue/expense summaries will be displayed here.
+            </p>
+            <div className="mt-4 h-32 bg-muted rounded-md flex items-center justify-center">
+              <p className="text-muted-foreground text-sm">Financial Charts Coming Soon</p>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-medium">System Settings</CardTitle>
@@ -61,7 +75,7 @@ export default function DirectorDashboardPage() {
         <CardContent>
           <p className="text-muted-foreground">
             This dashboard will provide a high-level overview of the institution,
-            quick access to reports, staff management tools, and important alerts
+            quick access to reports, staff management tools, financial summaries, and important alerts
             relevant to the director's role.
           </p>
         </CardContent>
