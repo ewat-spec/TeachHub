@@ -20,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare, Landmark } from "lucide-react"; // Added Landmark
+import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare, Landmark } from "lucide-react"; // Ensured Landmark
 
 interface NavItem {
   href: string;

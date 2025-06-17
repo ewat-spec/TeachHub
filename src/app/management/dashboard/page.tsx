@@ -1,7 +1,7 @@
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, ClipboardList, GanttChartSquare, Landmark } from "lucide-react"; // Added Landmark
+import { Briefcase, ClipboardList, GanttChartSquare, Landmark } from "lucide-react"; // Ensured Landmark icon
 
 export default function ManagementDashboardPage() {
   const managementSections = [
@@ -40,7 +40,7 @@ export default function ManagementDashboardPage() {
         <CardContent>
           <p className="text-muted-foreground">
             This portal provides access to specialized dashboards for various management roles within TeachHub.
-            Select a dashboard above to proceed to its dedicated tools and information.
+            Select a dashboard above to proceed to its dedicated tools and information. The new Finance Management section is now available.
           </p>
         </CardContent>
       </Card>
