@@ -20,9 +20,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette, Languages } from "lucide-react"; // Added Languages icon
+import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette, Languages, BookCheck } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
@@ -34,11 +35,12 @@ const lessonPlanFormSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   topic: z.string().min(3, { message: "Topic must be at least 3 characters." }),
   studentAudience: z.string().optional().describe("Description of the target student audience"),
+  isCbcCurriculum: z.boolean().optional().default(false),
   keyPointsForNotes: z.string().optional().describe("Comma-separated key points for AI note generation"),
   noteFormat: z.enum(["summary", "detailed-paragraph", "bullet-points"]).optional().default("detailed-paragraph"),
   languageOutputStyle: z.enum(['standard', 'simplified-english']).optional().default('standard').describe("Language style for AI generated notes"),
   lessonNotesContent: z.string().optional().describe("Detailed lesson notes for the trainer."),
-  objectives: z.string().min(10, { message: "Learning objectives must be at least 10 characters." }),
+  objectives: z.string().min(10, { message: "Learning objectives/outcomes must be at least 10 characters." }),
   activities: z.string().min(10, { message: "Activities description must be at least 10 characters." }),
   materials: z.string().optional(),
   assessment: z.string().optional(),
@@ -51,8 +53,9 @@ interface LessonPlan extends LessonPlanFormValues {
 }
 
 const initialLessonPlans: LessonPlan[] = [
-  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", languageOutputStyle: "standard", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
-  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
+  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", isCbcCurriculum: false, objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", languageOutputStyle: "standard", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
+  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", isCbcCurriculum: false, objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
+  { id: "lp3", title: "Introduction to Photosynthesis (CBC Aligned)", topic: "Photosynthesis", studentAudience: "Grade 7 Science Students", isCbcCurriculum: true, objectives: "Learners will be able to explain the process of photosynthesis and identify its key components.", activities: "Observing plant leaves, drawing diagrams, group presentation on importance of photosynthesis.", materials: "Plant samples, charts, videos", assessment: "Observation during group work, diagram labeling", keyPointsForNotes: "Chlorophyll, Sunlight, Carbon Dioxide, Water, Oxygen, Glucose", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "CBC Aligned notes on Photosynthesis:\nLearning Outcomes:\n1. Explain process\n2. Identify inputs & outputs...\nCore Competencies: Critical Thinking (analyzing process), Communication (presentation)..." },
 ];
 
 export default function LessonPlansPage() {
@@ -76,18 +79,21 @@ export default function LessonPlansPage() {
 
   const form = useForm<LessonPlanFormValues>({
     resolver: zodResolver(lessonPlanFormSchema),
-    defaultValues: { title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
+    defaultValues: { title: "", topic: "", studentAudience: "", isCbcCurriculum: false, keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
     mode: "onChange",
   });
 
   useEffect(() => {
     if (editingPlan) {
-      form.reset(editingPlan);
+      form.reset({
+        ...editingPlan,
+        isCbcCurriculum: editingPlan.isCbcCurriculum ?? false, // Ensure boolean
+      });
       setIsFormOpen(true);
       setAiSuggestions(null); 
       setAiLessonNotes(null);
     } else {
-      form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+      form.reset({ title: "", topic: "", studentAudience: "", isCbcCurriculum: false, keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     }
   }, [editingPlan, form]);
 
@@ -139,6 +145,7 @@ export default function LessonPlansPage() {
     const noteFormat = form.getValues("noteFormat");
     const studentAudience = form.getValues("studentAudience");
     const languageOutputStyle = form.getValues("languageOutputStyle");
+    const isCbcCurriculum = form.getValues("isCbcCurriculum");
 
     if (!topic || topic.trim().length < 3) {
       form.setError("topic", { type: "manual", message: "Please enter a valid topic (at least 3 characters) to generate notes." });
@@ -154,6 +161,7 @@ export default function LessonPlansPage() {
         keyPoints: keyPointsArray,
         noteFormat: noteFormat || "detailed-paragraph",
         languageOutputStyle: languageOutputStyle || "standard",
+        isCbcCurriculum: isCbcCurriculum || false,
       };
       if (studentAudience && studentAudience.trim().length > 0) {
         notesInput.studentAudience = studentAudience.trim();
@@ -161,7 +169,7 @@ export default function LessonPlansPage() {
 
       const notes = await getAiLessonNotes(notesInput);
       setAiLessonNotes(notes);
-      toast({ title: "AI Lesson Notes Ready", description: "Notes generated and tailored for your lesson plan." });
+      toast({ title: "AI Lesson Notes Ready", description: `Notes generated for your lesson plan ${isCbcCurriculum ? "(CBC Aligned)" : ""}.` });
     } catch (error) {
       toast({ title: "AI Notes Error", description: error instanceof Error ? error.message : "Could not generate AI lesson notes.", variant: "destructive" });
     } finally {
@@ -198,7 +206,7 @@ export default function LessonPlansPage() {
     setEditingPlan(null);
     setAiSuggestions(null);
     setAiLessonNotes(null);
-    form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+    form.reset({ title: "", topic: "", studentAudience: "", isCbcCurriculum: false, keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     setIsFormOpen(true);
   }
 
@@ -224,7 +232,7 @@ export default function LessonPlansPage() {
     <div className="space-y-6">
       <PageHeader
         title="My Lesson Plans"
-        description="Create and manage your lesson plans with AI assistance."
+        description="Create and manage your lesson plans with AI assistance. Align with CBC curriculum where needed."
         actions={
           <Button onClick={openNewForm}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create New Plan
@@ -258,7 +266,7 @@ export default function LessonPlansPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Lesson Topic</FormLabel>
-                       <FormControl><Input placeholder="e.g., Quantum Entanglement" {...field} /></FormControl>
+                       <FormControl><Input placeholder="e.g., Quantum Entanglement, CBC: Photosynthesis" {...field} /></FormControl>
                       <FormDescription>This topic will be used for AI assistance below.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -270,9 +278,29 @@ export default function LessonPlansPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" /> Student Audience (Optional)</FormLabel>
-                       <FormControl><Input placeholder="e.g., 2nd year Electrical Eng. students, Automotive apprentices" {...field} /></FormControl>
+                       <FormControl><Input placeholder="e.g., 2nd year Electrical Eng. students, Grade 7 CBC learners" {...field} /></FormControl>
                       <FormDescription>Describing the audience helps the AI tailor examples and explanations.</FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isCbcCurriculum"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                      <div className="space-y-0.5">
+                        <FormLabel className="flex items-center"><BookCheck className="mr-2 h-5 w-5 text-primary" />Align with CBC Curriculum?</FormLabel>
+                        <FormDescription>
+                          Enable for AI to generate notes & suggestions based on Kenyan CBC principles.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -346,7 +374,7 @@ export default function LessonPlansPage() {
                       </Button>
                       <Button type="button" onClick={handleFetchAiLessonNotes} disabled={isLoadingAiLessonNotes || !form.watch("topic")} variant="outline" className="shrink-0">
                           {isLoadingAiLessonNotes ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <StickyNote className="mr-2 h-4 w-4 text-accent" />}
-                          Generate Notes
+                          Generate Notes {form.getValues("isCbcCurriculum") ? "(CBC)" : ""}
                       </Button>
                   </div>
 
@@ -383,23 +411,23 @@ export default function LessonPlansPage() {
                       {aiLessonNotes && (
                           <AccordionItem value="ai-notes">
                               <AccordionTrigger className="text-primary hover:text-primary/80">
-                                  <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview
+                                  <StickyNote className="mr-2 h-5 w-5" /> Generated Lesson Notes Preview {form.getValues("isCbcCurriculum") ? "(CBC Aligned)" : ""}
                               </AccordionTrigger>
                               <AccordionContent className="space-y-3">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <Label htmlFor="aiNotesColorPicker" className="flex items-center text-sm">
+                                    <FormLabel htmlFor="aiNotesColorPicker" className="flex items-center text-sm">
                                       <Palette className="mr-1.5 h-4 w-4 text-muted-foreground"/>
-                                      Preview Color:
-                                    </Label>
+                                      Preview Text Color:
+                                    </FormLabel>
                                     <Input 
                                       id="aiNotesColorPicker"
                                       type="color" 
                                       value={aiNotesPreviewColor}
                                       onChange={(e) => setAiNotesPreviewColor(e.target.value)}
-                                      className="h-8 w-14 p-1 rounded"
+                                      className="h-8 w-14 p-1 rounded bg-background"
                                     />
                                   </div>
-                                  <div className="p-3 border rounded-md bg-white min-h-[150px] overflow-y-auto">
+                                  <div className="p-3 border rounded-md bg-white min-h-[150px] max-h-[400px] overflow-y-auto">
                                     <LatexRenderer latexString={aiLessonNotes.lessonNotes} textColor={aiNotesPreviewColor} />
                                   </div>
                                   <Button type="button" size="sm" variant="outline" onClick={handleCopyAiNotesToForm} className="bg-white">
@@ -430,8 +458,8 @@ export default function LessonPlansPage() {
                   name="objectives"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Learning Objectives</FormLabel>
-                      <FormControl><Textarea placeholder="What will learners achieve by the end of this lesson?" {...field} className="min-h-[100px] resize-y" /></FormControl>
+                      <FormLabel>Learning Objectives / Outcomes</FormLabel>
+                      <FormControl><Textarea placeholder="What will learners achieve by the end of this lesson? For CBC, frame these as competency-based outcomes." {...field} className="min-h-[100px] resize-y" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -442,7 +470,7 @@ export default function LessonPlansPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Activities &amp; Content Outline</FormLabel>
-                      <FormControl><Textarea placeholder="Briefly describe the sequence of activities, discussions, or content flow." {...field} className="min-h-[120px] resize-y" /></FormControl>
+                      <FormControl><Textarea placeholder="Briefly describe the sequence of activities, discussions, or content flow. For CBC, focus on learner-centered activities." {...field} className="min-h-[120px] resize-y" /></FormControl>
                        <FormDescription>This is a summary or outline of activities, while detailed content goes into 'My Lesson Notes / Content'.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -455,7 +483,7 @@ export default function LessonPlansPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Materials / Resources</FormLabel>
-                        <FormControl><Textarea placeholder="List any materials needed (e.g., slides, videos, articles, handouts, equipment)" {...field} className="min-h-[80px] resize-y"/></FormControl>
+                        <FormControl><Textarea placeholder="List any materials needed (e.g., slides, videos, articles, handouts, equipment, realia for CBC)" {...field} className="min-h-[80px] resize-y"/></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -466,7 +494,7 @@ export default function LessonPlansPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Assessment Methods</FormLabel>
-                        <FormControl><Textarea placeholder="How will learning be assessed? (e.g., quiz, project, observation, Q&A)" {...field} className="min-h-[80px] resize-y"/></FormControl>
+                        <FormControl><Textarea placeholder="How will learning be assessed? (e.g., quiz, project, observation, Q&A). For CBC, consider formative assessment of competencies." {...field} className="min-h-[80px] resize-y"/></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -494,6 +522,7 @@ export default function LessonPlansPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Topic</TableHead>
                   <TableHead className="hidden md:table-cell">Audience</TableHead>
+                  <TableHead className="hidden sm:table-cell">CBC</TableHead>
                    <TableHead className="hidden lg:table-cell">Language Style</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -504,6 +533,7 @@ export default function LessonPlansPage() {
                     <TableCell className="font-medium">{plan.title}</TableCell>
                     <TableCell>{plan.topic}</TableCell>
                     <TableCell className="hidden md:table-cell truncate max-w-xs">{plan.studentAudience || "N/A"}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{plan.isCbcCurriculum ? <CheckCircle className="h-5 w-5 text-green-600"/> : "No"}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                         {plan.languageOutputStyle === 'simplified-english' ? 'Simplified' : 'Standard'}
                     </TableCell>

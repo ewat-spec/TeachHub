@@ -28,7 +28,12 @@ export async function getAiSuggestions(input: SuggestLessonPlanElementsInput): P
 
 export async function getAiLessonNotes(input: GenerateLessonNotesInput): Promise<GenerateLessonNotesOutput> {
   try {
-    const result = await genkitGenerateNotes(input);
+    // Ensure isCbcCurriculum is explicitly passed, defaulting to false if undefined
+    const concreteInput = {
+      ...input,
+      isCbcCurriculum: input.isCbcCurriculum ?? false,
+    };
+    const result = await genkitGenerateNotes(concreteInput);
     return result;
   } catch (error) {
     console.error("Error generating AI lesson notes:", error);
