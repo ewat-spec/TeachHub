@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette } from "lucide-react";
+import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette, Languages } from "lucide-react"; // Added Languages icon
 import React, { useState, useEffect } from "react";
 import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
@@ -36,6 +36,7 @@ const lessonPlanFormSchema = z.object({
   studentAudience: z.string().optional().describe("Description of the target student audience"),
   keyPointsForNotes: z.string().optional().describe("Comma-separated key points for AI note generation"),
   noteFormat: z.enum(["summary", "detailed-paragraph", "bullet-points"]).optional().default("detailed-paragraph"),
+  languageOutputStyle: z.enum(['standard', 'simplified-english']).optional().default('standard').describe("Language style for AI generated notes"),
   lessonNotesContent: z.string().optional().describe("Detailed lesson notes for the trainer."),
   objectives: z.string().min(10, { message: "Learning objectives must be at least 10 characters." }),
   activities: z.string().min(10, { message: "Activities description must be at least 10 characters." }),
@@ -50,8 +51,8 @@ interface LessonPlan extends LessonPlanFormValues {
 }
 
 const initialLessonPlans: LessonPlan[] = [
-  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
-  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
+  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", languageOutputStyle: "standard", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
+  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
 ];
 
 export default function LessonPlansPage() {
@@ -65,7 +66,7 @@ export default function LessonPlansPage() {
   
   const [aiLessonNotes, setAiLessonNotes] = useState<GenerateLessonNotesOutput | null>(null);
   const [isLoadingAiLessonNotes, setIsLoadingAiLessonNotes] = useState(false);
-  const [aiNotesPreviewColor, setAiNotesPreviewColor] = useState<string>("#333333"); // Default preview color
+  const [aiNotesPreviewColor, setAiNotesPreviewColor] = useState<string>("#333333"); 
 
   const [isClient, setIsClient] = useState(false);
 
@@ -75,7 +76,7 @@ export default function LessonPlansPage() {
 
   const form = useForm<LessonPlanFormValues>({
     resolver: zodResolver(lessonPlanFormSchema),
-    defaultValues: { title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
+    defaultValues: { title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: ""},
     mode: "onChange",
   });
 
@@ -86,7 +87,7 @@ export default function LessonPlansPage() {
       setAiSuggestions(null); 
       setAiLessonNotes(null);
     } else {
-      form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+      form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     }
   }, [editingPlan, form]);
 
@@ -137,6 +138,7 @@ export default function LessonPlansPage() {
     const keyPointsStr = form.getValues("keyPointsForNotes");
     const noteFormat = form.getValues("noteFormat");
     const studentAudience = form.getValues("studentAudience");
+    const languageOutputStyle = form.getValues("languageOutputStyle");
 
     if (!topic || topic.trim().length < 3) {
       form.setError("topic", { type: "manual", message: "Please enter a valid topic (at least 3 characters) to generate notes." });
@@ -151,6 +153,7 @@ export default function LessonPlansPage() {
         lessonTopic: topic,
         keyPoints: keyPointsArray,
         noteFormat: noteFormat || "detailed-paragraph",
+        languageOutputStyle: languageOutputStyle || "standard",
       };
       if (studentAudience && studentAudience.trim().length > 0) {
         notesInput.studentAudience = studentAudience.trim();
@@ -195,7 +198,7 @@ export default function LessonPlansPage() {
     setEditingPlan(null);
     setAiSuggestions(null);
     setAiLessonNotes(null);
-    form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
+    form.reset({ title: "", topic: "", studentAudience: "", keyPointsForNotes: "", noteFormat: "detailed-paragraph", languageOutputStyle: "standard", lessonNotesContent: "", objectives: "", activities: "", materials: "", assessment: "" });
     setIsFormOpen(true);
   }
 
@@ -289,29 +292,53 @@ export default function LessonPlansPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="noteFormat"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Desired AI Note Format (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-background">
-                              <SelectValue placeholder="Select note format" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="detailed-paragraph">Detailed Paragraphs</SelectItem>
-                            <SelectItem value="bullet-points">Bullet Points</SelectItem>
-                            <SelectItem value="summary">Summary</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>Choose how the AI should structure the notes.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="noteFormat"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Desired AI Note Format</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select note format" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="detailed-paragraph">Detailed Paragraphs</SelectItem>
+                              <SelectItem value="bullet-points">Bullet Points</SelectItem>
+                              <SelectItem value="summary">Summary</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Choose how the AI should structure the notes.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="languageOutputStyle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><Languages className="mr-2 h-4 w-4 text-muted-foreground" />AI Note Language Style</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select language style" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="standard">Standard English</SelectItem>
+                              <SelectItem value="simplified-english">Simplified English</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Select 'Simplified' for easier comprehension.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                       <Button type="button" onClick={handleFetchAiSuggestions} disabled={isLoadingAiSuggestions || !form.watch("topic")} variant="outline" className="shrink-0">
                           {isLoadingAiSuggestions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-accent" />}
@@ -467,6 +494,7 @@ export default function LessonPlansPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Topic</TableHead>
                   <TableHead className="hidden md:table-cell">Audience</TableHead>
+                   <TableHead className="hidden lg:table-cell">Language Style</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -476,6 +504,9 @@ export default function LessonPlansPage() {
                     <TableCell className="font-medium">{plan.title}</TableCell>
                     <TableCell>{plan.topic}</TableCell>
                     <TableCell className="hidden md:table-cell truncate max-w-xs">{plan.studentAudience || "N/A"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                        {plan.languageOutputStyle === 'simplified-english' ? 'Simplified' : 'Standard'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(plan)} className="mr-2 hover:text-primary">
                         <Edit className="h-4 w-4" />
@@ -498,3 +529,4 @@ export default function LessonPlansPage() {
     </div>
   );
 }
+
