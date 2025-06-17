@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-// Removed: import { askWolframAlpha } from '@/ai/tools/wolframAlphaTool';
 
 const GenerateLessonNotesInputSchema = z.object({
   lessonTopic: z
@@ -48,12 +47,33 @@ export type GenerateLessonNotesOutput = z.infer<
 export async function generateLessonNotes(
   input: GenerateLessonNotesInput
 ): Promise<GenerateLessonNotesOutput> {
-  return generateLessonNotesFlow(input);
+  const flowName = 'generateLessonNotesFlow';
+  console.log(`[${flowName}] Called with topic: ${input.lessonTopic}, format: ${input.noteFormat}, audience: ${input.studentAudience || 'general'}`);
+  const startTime = Date.now();
+
+  try {
+    const result = await generateLessonNotesFlow(input);
+    const duration = Date.now() - startTime;
+    console.log(`[${flowName}] Successfully completed in ${duration}ms.`);
+    return result;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[${flowName}] Failed after ${duration}ms. Error:`, error);
+    console.error(`[${flowName}] Input that caused failure:`, {
+      lessonTopic: input.lessonTopic,
+      noteFormat: input.noteFormat,
+      studentAudience: input.studentAudience,
+      keyPointsCount: input.keyPoints?.length || 0,
+    });
+    if (error instanceof Error) {
+        throw new Error(`AI lesson note generation failed: ${error.message}`);
+    }
+    throw new Error('An unknown error occurred during AI lesson note generation.');
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'generateLessonNotesPrompt',
-  // Removed: tools: [askWolframAlpha],
   input: {schema: GenerateLessonNotesInputSchema},
   output: {schema: GenerateLessonNotesOutputSchema},
   prompt: `You are an expert AI assistant tasked with creating **exceptionally comprehensive, detailed, technically accurate, and profoundly human-friendly** lesson notes for trainers across a wide range of college-level subjects, including theoretical, technical, and vocational fields.
@@ -133,7 +153,7 @@ The notes should be formatted in valid Markdown.
 
 const generateLessonNotesFlow = ai.defineFlow(
   {
-    name: 'generateLessonNotesFlow',
+    name: 'generateLessonNotesInternalFlow', // Renamed for clarity from the exported wrapper
     inputSchema: GenerateLessonNotesInputSchema,
     outputSchema: GenerateLessonNotesOutputSchema,
   },
@@ -145,7 +165,10 @@ const generateLessonNotesFlow = ai.defineFlow(
     };
 
     const {output} = await prompt(processedInput);
-    return output!;
+    if (!output) { // Added a check for null/undefined output
+        throw new Error("AI prompt did not produce an output for lesson notes.");
+    }
+    return output;
   }
 );
 
