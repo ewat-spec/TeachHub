@@ -186,7 +186,7 @@ export default function StudentPortfoliosPage() {
 
   const filteredEvidence = selectedStudentName 
     ? evidenceList.filter(ev => ev.studentName === selectedStudentName)
-    : []; // Show no evidence if no student is selected, or show all: evidenceList
+    : []; 
 
   if (!isClient) {
     return (
@@ -225,12 +225,11 @@ export default function StudentPortfoliosPage() {
             <CardDescription>Choose a student to view and manage their Portfolio of Evidence.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Select onValueChange={(value) => setSelectedStudentName(value)} value={selectedStudentName || ""}>
+            <Select onValueChange={(value) => setSelectedStudentName(value)} value={selectedStudentName || undefined}>
                 <SelectTrigger className="w-full md:w-[300px]">
                     <SelectValue placeholder="Select a student..." />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">-- Select a Student --</SelectItem>
                     {mockStudents.map(student => (
                         <SelectItem key={student.id} value={student.name}>{student.name}</SelectItem>
                     ))}
@@ -262,7 +261,7 @@ export default function StudentPortfoliosPage() {
                             <Input 
                                 placeholder="Enter student's full name" 
                                 {...field} 
-                                readOnly={!!selectedStudentName && !editingEvidence} // Read-only if student selected from dropdown and not editing
+                                readOnly={!!selectedStudentName && !editingEvidence} 
                             />
                         </FormControl>
                         {selectedStudentName && !editingEvidence && <FormDescription>Adding evidence for {selectedStudentName}.</FormDescription>}
