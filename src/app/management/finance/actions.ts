@@ -20,7 +20,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function getStudentsFinancialSummaries(): Promise<StudentFinancialSummary[]> {
   await delay(500);
   return mockStudentsData.map(student => {
-    const financials = calculateStudentFinancials(student.id);
+    const financials = calculateStudentFinancials(student.id); // No await
     return {
       ...student,
       ...financials,
@@ -33,7 +33,7 @@ export async function getStudentFinancialDetails(studentId: string): Promise<Stu
     const student = mockStudentsData.find(s => s.id === studentId);
     if (!student) return null;
 
-    const financials = calculateStudentFinancials(studentId);
+    const financials = calculateStudentFinancials(studentId); // No await
     return {
         ...student,
         ...financials,

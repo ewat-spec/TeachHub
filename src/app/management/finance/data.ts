@@ -1,5 +1,6 @@
 
-'use server'; // To allow direct mutation of mock data in server actions for demo
+// To allow direct mutation of mock data in server actions for demo
+// Removed: 'use server'; 
 
 // Re-defining interfaces here for clarity and potential admin-specific extensions.
 // In a real app, these would likely come from a shared types directory.
@@ -98,7 +99,7 @@ export let mockPaymentsData: PaymentRecord[] = [
 ];
 
 // Helper to calculate financials for a student
-export const calculateStudentFinancials = async (studentId: string): Promise<{ invoices: Invoice[], payments: PaymentRecord[], outstandingBalance: number, totalBilled: number, totalPaid: number }> => {
+export const calculateStudentFinancials = (studentId: string): { invoices: Invoice[], payments: PaymentRecord[], outstandingBalance: number, totalBilled: number, totalPaid: number } => {
   const studentInvoices = mockInvoicesData.filter(inv => inv.studentId === studentId);
   const studentPayments = mockPaymentsData.filter(pay => pay.studentId === studentId);
   
