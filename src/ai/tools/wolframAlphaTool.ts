@@ -1,3 +1,5 @@
+
+'use server';
 /**
  * @fileOverview A Genkit tool for querying Wolfram Alpha.
  *
@@ -19,52 +21,43 @@ export type WolframAlphaQueryOutput = z.infer<typeof WolframAlphaQueryOutputSche
 
 /**
  * A Genkit tool to query Wolfram Alpha.
- * NOTE: This is a placeholder implementation. A Wolfram Alpha AppID (API key)
- * and the actual API call logic need to be implemented for this tool to function.
- * The AppID should ideally be stored as an environment variable (e.g., WOLFRAM_ALPHA_APPID).
+ * This tool requires a Wolfram Alpha AppID to be set in the environment variables
+ * as WOLFRAM_ALPHA_APPID.
  */
 export const askWolframAlpha = ai.defineTool(
   {
     name: 'askWolframAlpha',
-    description: 'Queries Wolfram Alpha for mathematical computations, formula information, step-by-step solutions, or plot data. Use for specific, well-defined mathematical questions.',
+    description: 'Queries the Wolfram Alpha computational knowledge engine for mathematical computations, formula information, step-by-step solutions, or plot data. Use for specific, well-defined mathematical or factual questions.',
     inputSchema: WolframAlphaQueryInputSchema,
     outputSchema: WolframAlphaQueryOutputSchema,
   },
   async (input: WolframAlphaQueryInput): Promise<WolframAlphaQueryOutput> => {
-    // TODO: Implement actual Wolfram Alpha API call using an AppID.
-    // 1. Get WOLFRAM_ALPHA_APPID from environment variables.
-    // 2. Construct the API request URL (e.g., for Simple API, Short Answers API, or Full Results API).
-    //    - Simple API (image output): https://api.wolframalpha.com/v1/simple?appid=YOUR_APPID&i=QUERY
-    //    - Short Answers API (text output): https://api.wolframalpha.com/v1/result?appid=YOUR_APPID&i=QUERY
-    // 3. Make the HTTP GET request.
-    // 4. Parse the response based on the API used (e.g., image URL, plain text, XML).
-    // 5. Return the relevant information as a string.
-
     const apiKey = process.env.WOLFRAM_ALPHA_APPID;
 
     if (!apiKey) {
-      console.warn(
-        `Wolfram Alpha tool called with query: "${input.query}". ` +
-        `Placeholder response returned. WOLFRAM_ALPHA_APPID environment variable is not set.`
-      );
-      return `[Placeholder: Wolfram Alpha result for "${input.query}". API key (WOLFRAM_ALPHA_APPID) not configured and full implementation required.]`;
+      const errorMessage = `Wolfram Alpha tool called with query: "${input.query}". ` +
+        `However, the WOLFRAM_ALPHA_APPID environment variable is not set. The tool cannot function without it.`;
+      console.warn(errorMessage);
+      // Inform the calling LLM that the tool is configured incorrectly.
+      return `[Tool Execution Error: The Wolfram Alpha API key (WOLFRAM_ALPHA_APPID) is not configured in the environment. Please ask the user to configure it.]`;
     }
 
-    // Example using Short Answers API (which returns plain text)
-    // You might want to choose a different API endpoint based on your needs (e.g., Simple API for images of results)
+    // Using the Short Answers API, which is designed to return a single line of text.
     try {
       const encodedQuery = encodeURIComponent(input.query);
       const response = await fetch(`https://api.wolframalpha.com/v1/result?appid=${apiKey}&i=${encodedQuery}`);
 
       if (!response.ok) {
         const errorText = await response.text();
+        // Handle specific Wolfram Alpha non-understanding cases gracefully.
+        if (response.status === 501 && errorText.includes("did not understand")) {
+            return `[Wolfram Alpha did not understand the query: "${input.query}"]`;
+        }
         console.error(`Wolfram Alpha API error for query "${input.query}": ${response.status} ${response.statusText}`, errorText);
         return `[Error querying Wolfram Alpha for "${input.query}": ${response.statusText}. Details: ${errorText}]`;
       }
 
       const resultText = await response.text();
-      // The Short Answers API might return "Wolfram|Alpha did not understand your input" or the actual answer.
-      // You might want to add more sophisticated error handling or response parsing here.
       return resultText;
 
     } catch (error: any) {
