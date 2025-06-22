@@ -11,13 +11,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const WolframAlphaQueryInputSchema = z.object({
+const WolframAlphaQueryInputSchema = z.object({
   query: z.string().describe('The query to send to Wolfram Alpha (e.g., "derivative of x^3 * sin(x)", "plot sin(x) from -pi to pi", "integrate 1/(x^2+1) dx from 0 to 1").'),
 });
-export type WolframAlphaQueryInput = z.infer<typeof WolframAlphaQueryInputSchema>;
+type WolframAlphaQueryInput = z.infer<typeof WolframAlphaQueryInputSchema>;
 
-export const WolframAlphaQueryOutputSchema = z.string().describe("The result from Wolfram Alpha, typically plain text or a description of an image/plot. If the query is for a plot, this might describe the plot or provide a placeholder for where plot data would go.");
-export type WolframAlphaQueryOutput = z.infer<typeof WolframAlphaQueryOutputSchema>;
+const WolframAlphaQueryOutputSchema = z.string().describe("The result from Wolfram Alpha, typically plain text or a description of an image/plot. If the query is for a plot, this might describe the plot or provide a placeholder for where plot data would go.");
+type WolframAlphaQueryOutput = z.infer<typeof WolframAlphaQueryOutputSchema>;
 
 /**
  * A Genkit tool to query Wolfram Alpha.

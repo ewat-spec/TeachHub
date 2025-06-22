@@ -9,20 +9,20 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const MonteCarloIntegrationInputSchema = z.object({
+const MonteCarloIntegrationInputSchema = z.object({
   functionBody: z.string().describe('The body of the JavaScript function to integrate, e.g., "x*x", "Math.sin(x)". The function will be evaluated as `new Function(\'x\', \'return \' + functionBody)`.'),
   xMin: z.number().describe('The lower bound of the integration range (e.g., 0).'),
   xMax: z.number().describe('The upper bound of the integration range (e.g., 1).'),
   simulations: z.number().min(1000).max(1000000).optional().default(100000).describe('The number of simulation points to use. Defaults to 100,000.'),
 });
-export type MonteCarloIntegrationInput = z.infer<typeof MonteCarloIntegrationInputSchema>;
+type MonteCarloIntegrationInput = z.infer<typeof MonteCarloIntegrationInputSchema>;
 
-export const MonteCarloIntegrationOutputSchema = z.object({
+const MonteCarloIntegrationOutputSchema = z.object({
     estimatedArea: z.number().describe('The estimated area under the curve.'),
     pointsTotal: z.number().describe('The total number of points used in the simulation.'),
     pointsUnderCurve: z.number().describe('The number of random points that fell under the function\'s curve.'),
 });
-export type MonteCarloIntegrationOutput = z.infer<typeof MonteCarloIntegrationOutputSchema>;
+type MonteCarloIntegrationOutput = z.infer<typeof MonteCarloIntegrationOutputSchema>;
 
 
 /**
