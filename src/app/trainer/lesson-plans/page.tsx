@@ -24,10 +24,10 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, PlusCircle, Edit, Trash2, CheckCircle, Loader2, ListChecks, Lightbulb, StickyNote, Copy, Users, Palette, Languages, BookCheck } from "lucide-react";
-import React, { useState, useEffect } from "react";
-import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes } from "./actions"; 
+import React, { useState, useEffect, useCallback } from "react";
+import { getAiSuggestions, saveLessonPlan, deleteLessonPlan, getAiLessonNotes, getLessonPlans } from "./actions"; 
 import type { SuggestLessonPlanElementsOutput } from '@/ai/flows/suggest-lesson-plan-elements';
-import type { GenerateLessonNotesInput, GenerateLessonNotesOutput } from '@/ai/flows/generate-lesson-notes-flow';
+import type { GenerateLessonNotesInput, GenerateLessonNotesOutput } from "@/ai/flows/generate-lesson-notes-flow";
 import { LatexRenderer } from "@/components/common/LatexRenderer";
 
 const lessonPlanFormSchema = z.object({
@@ -52,15 +52,10 @@ interface LessonPlan extends LessonPlanFormValues {
   id: string;
 }
 
-const initialLessonPlans: LessonPlan[] = [
-  { id: "lp1", title: "Effective Communication Skills", topic: "Communication", studentAudience: "General corporate staff", isCbcCurriculum: false, objectives: "Understand key communication barriers. Practice active listening.", activities: "Role-playing, group discussion.", materials: "Handouts, whiteboard", assessment: "Participation, short quiz", keyPointsForNotes: "Active listening, Non-verbal cues, Giving feedback", noteFormat: "bullet-points", languageOutputStyle: "standard", lessonNotesContent: "Detailed notes on active listening techniques...\n- Paraphrasing\n- Asking clarifying questions\n- Body language" },
-  { id: "lp2", title: "Project Management Basics", topic: "Project Management", studentAudience: "Aspiring project managers", isCbcCurriculum: false, objectives: "Define project lifecycle. Identify key PM tools.", activities: "Case study analysis, tool demonstration.", materials: "Slides, PM software demo", assessment: "Case study report", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "Introduction to Project Management...\n- What is a project?\n- Project constraints (Scope, Time, Cost)\n- Stakeholder management basics" },
-  { id: "lp3", title: "Introduction to Photosynthesis (CBC Aligned)", topic: "Photosynthesis", studentAudience: "Grade 7 Science Students", isCbcCurriculum: true, objectives: "Learners will be able to explain the process of photosynthesis and identify its key components.", activities: "Observing plant leaves, drawing diagrams, group presentation on importance of photosynthesis.", materials: "Plant samples, charts, videos", assessment: "Observation during group work, diagram labeling", keyPointsForNotes: "Chlorophyll, Sunlight, Carbon Dioxide, Water, Oxygen, Glucose", noteFormat: "detailed-paragraph", languageOutputStyle: "simplified-english", lessonNotesContent: "CBC Aligned notes on Photosynthesis:\nLearning Outcomes:\n1. Explain process\n2. Identify inputs & outputs...\nCore Competencies: Critical Thinking (analyzing process), Communication (presentation)..." },
-];
-
 export default function LessonPlansPage() {
   const { toast } = useToast();
-  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>(initialLessonPlans);
+  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
   
@@ -83,6 +78,24 @@ export default function LessonPlansPage() {
     mode: "onChange",
   });
 
+  const fetchLessonPlans = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const plans = await getLessonPlans();
+      setLessonPlans(plans as LessonPlan[]);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not fetch lesson plans.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchLessonPlans();
+    }
+  }, [isClient, fetchLessonPlans]);
+
   useEffect(() => {
     if (editingPlan) {
       form.reset({
@@ -101,17 +114,13 @@ export default function LessonPlansPage() {
     try {
       const result = await saveLessonPlan(data);
       if (result.success) {
-        if (editingPlan) {
-          setLessonPlans(lessonPlans.map(lp => lp.id === editingPlan.id ? { ...data, id: editingPlan.id } as LessonPlan : lp));
-        } else {
-          setLessonPlans([...lessonPlans, { ...data, id: result.id! } as LessonPlan]);
-        }
         toast({ title: editingPlan ? "Lesson Plan Updated" : "Lesson Plan Saved", description: result.message, action: <CheckCircle className="text-green-500"/> });
         setEditingPlan(null);
         setIsFormOpen(false);
         setAiSuggestions(null);
         setAiLessonNotes(null);
         form.reset();
+        fetchLessonPlans(); // Re-fetch from Firestore
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -192,8 +201,8 @@ export default function LessonPlansPage() {
     try {
       const result = await deleteLessonPlan(planId);
       if (result.success) {
-        setLessonPlans(lessonPlans.filter(lp => lp.id !== planId));
         toast({ title: "Lesson Plan Deleted", description: result.message, variant: "destructive" });
+        fetchLessonPlans(); // Re-fetch from Firestore
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -210,13 +219,16 @@ export default function LessonPlansPage() {
     setIsFormOpen(true);
   }
 
-  if (!isClient) {
+  if (!isClient || isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader title="My Lesson Plans" description="Create and manage your lesson plans with AI assistance." />
         <div className="animate-pulse">
             <div className="h-10 bg-muted rounded w-40 mb-4"></div>
             <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="h-7 w-1/3 bg-muted rounded"></CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
                 <div className="h-8 bg-muted rounded w-full mb-2"></div>
                 <div className="h-8 bg-muted rounded w-full mb-2"></div>
@@ -515,7 +527,12 @@ export default function LessonPlansPage() {
           <CardTitle className="font-headline">My Lesson Plans</CardTitle>
         </CardHeader>
         <CardContent>
-          {lessonPlans.length > 0 ? (
+          {isLoading ? (
+             <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading Lesson Plans from Firestore...</p>
+              </div>
+          ) : lessonPlans.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -552,11 +569,10 @@ export default function LessonPlansPage() {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No lesson plans created yet. Click "Create New Plan" to get started.</p>
+            <p className="text-muted-foreground text-center py-8">No lesson plans found in the database. Click "Create New Plan" to get started.</p>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
