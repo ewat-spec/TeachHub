@@ -20,13 +20,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { saveAssessment, deleteAssessment } from "./actions";
+import { saveAssessment, deleteAssessment, getAssessments } from "./actions";
 
 const assessmentFormSchema = z.object({
   id: z.string().optional(),
@@ -44,21 +44,35 @@ interface Assessment extends AssessmentFormValues {
   id: string;
 }
 
-const initialAssessments: Assessment[] = [
-  { id: "cat1", title: "CAT 1: React Fundamentals", topic: "Introduction to React", instructions: "Answer all questions. Duration: 1 hour.", questions: "1. What is JSX?\n2. Explain the concept of state in React.", totalMarks: 20, testDate: new Date("2024-10-01") },
-  { id: "cat2", title: "Mid-Term: Advanced CSS", topic: "Advanced CSS Techniques", instructions: "Attempt any two questions from Section A, and all from Section B.", questions: "Section A:\n1. Describe CSS Specificity.\n2. Explain Flexbox vs Grid.\nSection B:\n1. Implement a responsive navigation bar.", totalMarks: 50, testDate: new Date("2024-10-15") },
-];
-
 export default function AssessmentsPage() {
   const { toast } = useToast();
-  const [assessments, setAssessments] = useState<Assessment[]>(initialAssessments);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const fetchAssessments = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedAssessments = await getAssessments();
+      setAssessments(fetchedAssessments as Assessment[]);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not fetch assessments from the database.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchAssessments();
+    }
+  }, [isClient, fetchAssessments]);
 
   const form = useForm<AssessmentFormValues>({
     resolver: zodResolver(assessmentFormSchema),
@@ -80,17 +94,13 @@ export default function AssessmentsPage() {
 
   async function onSubmit(data: AssessmentFormValues) {
     try {
-      const result = await saveAssessment(data); // Using placeholder action
+      const result = await saveAssessment(data);
       if (result.success) {
-        if (editingAssessment) {
-          setAssessments(assessments.map(asm => asm.id === editingAssessment.id ? { ...data, id: editingAssessment.id } as Assessment : asm));
-        } else {
-          setAssessments([...assessments, { ...data, id: result.id! } as Assessment]);
-        }
         toast({ title: editingAssessment ? "Assessment Updated" : "Assessment Saved", description: result.message, action: <CheckCircle className="text-green-500"/> });
         setEditingAssessment(null);
         setIsFormOpen(false);
         form.reset();
+        fetchAssessments(); // Re-fetch from Firestore
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -105,10 +115,10 @@ export default function AssessmentsPage() {
 
   const handleDelete = async (assessmentId: string) => {
     try {
-      const result = await deleteAssessment(assessmentId); // Using placeholder action
+      const result = await deleteAssessment(assessmentId);
       if (result.success) {
-        setAssessments(assessments.filter(asm => asm.id !== assessmentId));
         toast({ title: "Assessment Deleted", description: result.message, variant: "destructive" });
+        fetchAssessments(); // Re-fetch from Firestore
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -119,7 +129,7 @@ export default function AssessmentsPage() {
 
   const openNewForm = () => {
     setEditingAssessment(null);
-    form.reset({ title: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: undefined });
+    form.reset({ title: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: new Date() });
     setIsFormOpen(true);
   }
 
@@ -277,7 +287,12 @@ export default function AssessmentsPage() {
           <CardTitle className="font-headline">My Assessments List</CardTitle>
         </CardHeader>
         <CardContent>
-          {assessments.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading assessments...</p>
+            </div>
+          ) : assessments.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -310,7 +325,7 @@ export default function AssessmentsPage() {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-muted-foreground text-center py-8">No assessments created yet. Click "Create New Assessment" to get started.</p>
+            <p className="text-muted-foreground text-center py-8">No assessments found in the database. Click "Create New Assessment" to get started.</p>
           )}
         </CardContent>
       </Card>

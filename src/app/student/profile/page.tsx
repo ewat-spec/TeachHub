@@ -19,9 +19,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Upload, Edit3, Briefcase } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { CheckCircle, Upload, Edit3, Briefcase, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { getStudentProfile, updateStudentProfile } from "./actions";
+
+// Using a mock ID for the "logged in" student for this prototype phase
+const MOCK_LOGGED_IN_STUDENT_ID = "studentAlexDemo"; 
 
 const studentProfileSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -37,43 +41,62 @@ const studentProfileSchema = z.object({
 
 type StudentProfileFormValues = z.infer<typeof studentProfileSchema>;
 
-// Mock student data - in a real app, this would come from an API or auth context
-const defaultValues: StudentProfileFormValues = {
-  fullName: "Alex DemoStudent",
-  admissionNumber: "SCT221-0077/2024",
-  email: "alex.student@example.com",
-  phone: "0712345678",
-  course: "Automotive Engineering",
-  yearOfStudy: "Year 2",
-  bio: "Eager learner in Automotive Engineering, passionate about engine mechanics and new vehicle technologies. Aiming to excel in practical skills.",
-  profilePicUrl: "https://placehold.co/150x150.png",
-  careerAspirations: "To become a certified Master Technician specializing in EV diagnostics and repair. Interested in sustainable automotive solutions.",
-};
 
 export default function StudentProfilePage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(defaultValues.profilePicUrl || null);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [isLoading, setIsLoading] = useState(true);
+  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
 
   const form = useForm<StudentProfileFormValues>({
     resolver: zodResolver(studentProfileSchema),
-    defaultValues,
+    defaultValues: {}, // Will be populated from Firestore
     mode: "onChange",
   });
 
+  const fetchProfile = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const profileData = await getStudentProfile(MOCK_LOGGED_IN_STUDENT_ID);
+      if (profileData) {
+        form.reset(profileData);
+        if (profileData.profilePicUrl) {
+            setProfilePicPreview(profileData.profilePicUrl);
+        }
+      } else {
+        toast({ title: "Profile Not Found", description: "Could not load your profile data.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to load profile.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [form, toast]);
+
+
+  useEffect(() => {
+    setIsClient(true);
+    if (isClient) {
+        fetchProfile();
+    }
+  }, [isClient, fetchProfile]);
+
+
   async function onSubmit(data: StudentProfileFormValues) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Student profile data submitted:", data);
-    toast({
-      title: "Profile Updated (Mock)",
-      description: "Your profile information has been successfully updated.",
-      action: <CheckCircle className="text-green-500" />,
-    });
+    try {
+      const result = await updateStudentProfile(MOCK_LOGGED_IN_STUDENT_ID, data);
+      if(result.success) {
+        toast({
+          title: "Profile Updated",
+          description: "Your profile information has been successfully updated.",
+          action: <CheckCircle className="text-green-500" />,
+        });
+      } else {
+        toast({ title: "Update Failed", description: result.message, variant: "destructive"});
+      }
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive"});
+    }
   }
 
   const handleProfilePicChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,15 +104,19 @@ export default function StudentProfilePage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfilePicPreview(reader.result as string);
-        form.setValue("profilePicUrl", reader.result as string, { shouldValidate: true }); 
+        const dataUrl = reader.result as string;
+        setProfilePicPreview(dataUrl);
+        // This is a mock. In a real app, you would upload the file to Firebase Storage
+        // and save the URL. For now, we'll just save the data URL (which is very long and inefficient).
+        form.setValue("profilePicUrl", dataUrl, { shouldValidate: true, shouldDirty: true }); 
+        toast({title: "Image Preview Updated", description: "Note: In a real app, this would be uploaded. Saving now will store a temporary version."});
       };
       reader.readAsDataURL(file);
     }
   };
 
 
-  if (!isClient) {
+  if (!isClient || isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <PageHeader title="My Profile" description="View and update your personal details." />
@@ -137,7 +164,7 @@ export default function StudentProfilePage() {
                 <FormField
                   control={form.control}
                   name="profilePicUrl"
-                  render={({ field }) => ( // field is not directly used for input type="file" value
+                  render={({ field }) => ( 
                     <FormItem className="w-full max-w-xs">
                       <FormLabel htmlFor="profilePicUpload" className="sr-only">Upload Profile Picture</FormLabel>
                       <FormControl>
@@ -145,7 +172,7 @@ export default function StudentProfilePage() {
                           id="profilePicUpload"
                           type="file" 
                           accept="image/*" 
-                          onChange={handleProfilePicChange} // Use dedicated handler
+                          onChange={handleProfilePicChange} 
                           className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                         />
                       </FormControl>
@@ -269,7 +296,7 @@ export default function StudentProfilePage() {
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                {form.formState.isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : "Save Changes"}
               </Button>
             </CardFooter>
           </Card>
@@ -278,4 +305,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
