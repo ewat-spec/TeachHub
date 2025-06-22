@@ -372,9 +372,9 @@ export default function StudentDashboardPage() {
     <Card className="shadow-xl hover:shadow-accent/10 transition-shadow">
         <CardHeader className="border-b">
             <CardTitle className="font-headline text-xl flex items-center text-accent-foreground">
-                <Brain className="mr-2 h-6 w-6 text-accent" /> AI Academic Helper
+                <Brain className="mr-2 h-6 w-6 text-accent" /> AI Research Assistant & Guide
             </CardTitle>
-            <CardDescription>Stuck on a concept? Ask the AI for a quick explanation. Always verify complex info with your trainer.</CardDescription>
+            <CardDescription>Ask deep questions to understand how concepts connect and how real-world problems are solved.</CardDescription>
         </CardHeader>
         <Form {...aiForm}>
             <form onSubmit={aiForm.handleSubmit(onAskAiSubmit)}>
@@ -387,7 +387,7 @@ export default function StudentDashboardPage() {
                             <FormLabel className="font-semibold text-foreground">Your Question:</FormLabel>
                             <FormControl>
                                 <Textarea
-                                placeholder={`e.g., In ${mockStudent.course.toLowerCase()}, how does a differential work? What's Ohm's Law?`}
+                                placeholder="e.g., How did scientists overcome optical limits to see an atom? Explain the different fields of knowledge that were combined."
                                 className="min-h-[100px] resize-y bg-background"
                                 {...field}
                                 />
@@ -398,7 +398,7 @@ export default function StudentDashboardPage() {
                     />
                      <Button type="submit" disabled={isLoadingAiAnswer} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                         {isLoadingAiAnswer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Ask AI
+                        Ask AI Guide
                     </Button>
                 </CardContent>
             </form>
@@ -413,7 +413,7 @@ export default function StudentDashboardPage() {
         )}
         {aiAnswer && !isLoadingAiAnswer && (
             <CardContent className="pt-0">
-                <h3 className="text-md font-semibold mb-2 text-accent-foreground">AI's Response:</h3>
+                <h3 className="text-md font-semibold mb-2 text-accent-foreground">AI Research Guide's Response:</h3>
                 <div className="p-4 border rounded-md bg-muted/30 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5">
                   <LatexRenderer latexString={aiAnswer.answer} />
                 </div>
