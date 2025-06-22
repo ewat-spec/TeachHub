@@ -26,7 +26,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, Brain, BarChart3, ListChecks, Lightbulb, Loader2, Sparkles } from "lucide-react";
+import { PlusCircle, Edit, Trash2, CheckCircle, CalendarIcon, Brain, BarChart3, ListChecks, Lightbulb, Loader2, Sparkles, CalendarPlus } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -201,6 +201,13 @@ export default function SchedulePage() {
     });
     setIsFormOpen(true);
   }
+  
+  const handleGoogleCalendarSync = () => {
+    toast({
+        title: "Feature Coming Soon",
+        description: "Google Calendar synchronization is planned for a future update!",
+    });
+  };
 
   if (!isClient) {
     return (
@@ -227,9 +234,14 @@ export default function SchedulePage() {
         title="My Class Schedule"
         description="Manage your personal class schedule and session details."
         actions={
-          <Button onClick={openNewForm}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Session
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleGoogleCalendarSync} variant="outline">
+                <CalendarPlus className="mr-2 h-4 w-4" /> Sync with Google Calendar
+            </Button>
+            <Button onClick={openNewForm}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Session
+            </Button>
+          </div>
         }
       />
 
