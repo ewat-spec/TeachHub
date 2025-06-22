@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MessageSquare, Check, Send, Inbox } from "lucide-react";
 import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
 
 import type { StudentQuestion } from "./data";
-import { getStudentQuestionsForTrainer, markQuestionAsRead } from "./actions";
+import { getStudentQuestionsForTrainer, markQuestionAsRead, sendReplyToStudent } from "./actions";
 
 export default function StudentQuestionsPage() {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ export default function StudentQuestionsPage() {
   const [questions, setQuestions] = useState<StudentQuestion[]>([]);
   const [replyingTo, setReplyingTo] = useState<StudentQuestion | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   const fetchQuestions = async () => {
     setIsLoading(true);
@@ -37,7 +39,7 @@ export default function StudentQuestionsPage() {
   useEffect(() => {
     setIsClient(true);
     fetchQuestions();
-  }, [toast]);
+  }, []);
 
 
   const handleMarkAsRead = async (questionId: string) => {
@@ -64,16 +66,25 @@ export default function StudentQuestionsPage() {
         toast({title: "Cannot Send", description: "Reply text cannot be empty.", variant: "destructive"});
         return;
     }
-    // Mock sending reply
-    toast({title: "Reply Sent (Mock)", description: `Your reply to ${replyingTo.studentName} regarding "${replyingTo.courseTitle}" has been notionally sent.`});
-    console.log("Mock Reply Sent:", { questionId: replyingTo.id, reply: replyText });
-    
-    // Mark as read if not already and clear reply state
-    if (!replyingTo.isRead) {
-        await handleMarkAsRead(replyingTo.id);
+    setIsSendingReply(true);
+    try {
+        const result = await sendReplyToStudent(replyingTo.id, replyText);
+        if (result.success) {
+            toast({title: "Reply Sent (Mock)", description: `Your reply to ${replyingTo.studentName} has been notionally sent.`});
+            // Mark as read if not already and clear reply state
+            if (!replyingTo.isRead) {
+                await handleMarkAsRead(replyingTo.id);
+            }
+            setReplyingTo(null);
+            setReplyText("");
+        } else {
+            toast({ title: "Error Sending Reply", description: result.message, variant: "destructive" });
+        }
+    } catch(error) {
+        toast({ title: "Error", description: "An error occurred while sending the reply.", variant: "destructive" });
+    } finally {
+        setIsSendingReply(false);
     }
-    setReplyingTo(null);
-    setReplyText("");
   };
 
 
@@ -137,8 +148,11 @@ export default function StudentQuestionsPage() {
                                     className="min-h-[100px]"
                                 />
                                 <div className="flex justify-end gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => setReplyingTo(null)}>Cancel</Button>
-                                    <Button size="sm" onClick={handleSendReply}><Send className="mr-2 h-4 w-4" /> Send Reply</Button>
+                                    <Button variant="outline" size="sm" onClick={() => setReplyingTo(null)} disabled={isSendingReply}>Cancel</Button>
+                                    <Button size="sm" onClick={handleSendReply} disabled={isSendingReply}>
+                                        {isSendingReply ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
+                                        Send Reply
+                                    </Button>
                                 </div>
                             </div>
                         ) : (
