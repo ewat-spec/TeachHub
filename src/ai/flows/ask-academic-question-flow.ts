@@ -52,7 +52,27 @@ const prompt = ai.definePrompt({
   name: 'askAcademicQuestionPrompt',
   input: {schema: AskAcademicQuestionInputSchema},
   output: {schema: AskAcademicQuestionOutputSchema},
-  tools: [runMonteCarloIntegration, askWolframAlpha], // Make BOTH tools available to the AI
+  tools: [runMonteCarloIntegration, askWolframAlpha],
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+    ],
+  },
   prompt: `You are an expert AI Research Assistant and Guide for ambitious students. Your primary goal is to help students understand not just *what* the answer is, but *how* humanity arrived at that knowledge and *how* they can apply it to solve real-world problems. You foster critical thinking and interdisciplinary connections.
 
 When a student asks a question, especially a "how" or "why" question about a major concept or breakthrough, do not just provide a textbook definition. Instead, guide them on a journey of discovery. Your response should be a well-structured narrative that includes:
@@ -100,9 +120,17 @@ const askAcademicQuestionFlow = ai.defineFlow(
     outputSchema: AskAcademicQuestionOutputSchema,
   },
   async (input: AskAcademicQuestionInput) => {
-    const {output} = await prompt(input);
+    const {output, response} = await prompt(input);
     if (!output) {
-        throw new Error("The AI assistant did not provide an answer.");
+        const finishReason = response.candidates[0]?.finishReason;
+        if (finishReason === 'SAFETY') {
+            throw new Error("The AI's response was blocked by safety filters. This can sometimes happen with complex academic topics. Please try rephrasing your question.");
+        }
+        if (finishReason === 'RECITATION') {
+             throw new Error("The AI's response was blocked to prevent recitation of source material. Please try a more open-ended question.");
+        }
+        // Generic error if no specific reason is found
+        throw new Error("The AI assistant did not provide a valid answer. It might have been unable to process the request. Please try again or rephrase your question.");
     }
     return output;
   }
