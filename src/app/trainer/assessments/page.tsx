@@ -27,10 +27,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { saveAssessment, deleteAssessment, getAssessments } from "./actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getTrainerCourses } from "../class-lists/actions";
+import type { Course } from "../class-lists/data";
 
 const assessmentFormSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(3, { message: "Assessment title must be at least 3 characters." }),
+  courseId: z.string().min(1, { message: "You must select a course." }),
   topic: z.string().min(3, { message: "Associated topic must be at least 3 characters." }),
   instructions: z.string().optional(),
   questions: z.string().min(10, { message: "Questions must be at least 10 characters." }),
@@ -47,6 +51,7 @@ interface Assessment extends AssessmentFormValues {
 export default function AssessmentsPage() {
   const { toast } = useToast();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,13 +61,17 @@ export default function AssessmentsPage() {
     setIsClient(true);
   }, []);
 
-  const fetchAssessments = useCallback(async () => {
+  const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedAssessments = await getAssessments();
+      const [fetchedAssessments, fetchedCourses] = await Promise.all([
+        getAssessments(),
+        getTrainerCourses(),
+      ]);
       setAssessments(fetchedAssessments as Assessment[]);
+      setCourses(fetchedCourses);
     } catch (error) {
-      toast({ title: "Error", description: "Could not fetch assessments from the database.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not fetch initial data from the database.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +79,13 @@ export default function AssessmentsPage() {
 
   useEffect(() => {
     if (isClient) {
-      fetchAssessments();
+      fetchInitialData();
     }
-  }, [isClient, fetchAssessments]);
+  }, [isClient, fetchInitialData]);
 
   const form = useForm<AssessmentFormValues>({
     resolver: zodResolver(assessmentFormSchema),
-    defaultValues: { title: "", topic: "", instructions: "", questions: "", totalMarks: 10 },
+    defaultValues: { title: "", courseId: "", topic: "", instructions: "", questions: "", totalMarks: 10 },
     mode: "onChange",
   });
 
@@ -88,7 +97,7 @@ export default function AssessmentsPage() {
       });
       setIsFormOpen(true);
     } else {
-      form.reset({ title: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: undefined });
+      form.reset({ title: "", courseId: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: undefined });
     }
   }, [editingAssessment, form]);
 
@@ -100,7 +109,7 @@ export default function AssessmentsPage() {
         setEditingAssessment(null);
         setIsFormOpen(false);
         form.reset();
-        fetchAssessments(); // Re-fetch from Firestore
+        fetchInitialData(); // Re-fetch all data
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -118,7 +127,7 @@ export default function AssessmentsPage() {
       const result = await deleteAssessment(assessmentId);
       if (result.success) {
         toast({ title: "Assessment Deleted", description: result.message, variant: "destructive" });
-        fetchAssessments(); // Re-fetch from Firestore
+        fetchInitialData(); // Re-fetch all data
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -129,7 +138,7 @@ export default function AssessmentsPage() {
 
   const openNewForm = () => {
     setEditingAssessment(null);
-    form.reset({ title: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: new Date() });
+    form.reset({ title: "", courseId: "", topic: "", instructions: "", questions: "", totalMarks: 10, testDate: new Date() });
     setIsFormOpen(true);
   }
 
@@ -172,6 +181,29 @@ export default function AssessmentsPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardContent className="space-y-6">
+                 <FormField
+                  control={form.control}
+                  name="courseId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select the course for this assessment" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {courses.map(course => (
+                            <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Assessments must be linked to a course.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="title"
@@ -188,9 +220,9 @@ export default function AssessmentsPage() {
                   name="topic"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Associated Topic / Course</FormLabel>
-                       <FormControl><Input placeholder="e.g., Python Basics" {...field} /></FormControl>
-                      <FormDescription>Link this assessment to a specific topic or course.</FormDescription>
+                      <FormLabel>Associated Topic</FormLabel>
+                       <FormControl><Input placeholder="e.g., Python Basics, Engine Systems" {...field} /></FormControl>
+                      <FormDescription>Link this assessment to a specific topic within the course.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -297,7 +329,7 @@ export default function AssessmentsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead>Topic</TableHead>
+                  <TableHead>Course</TableHead>
                   <TableHead className="hidden md:table-cell">Test Date</TableHead>
                   <TableHead>Total Marks</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -307,7 +339,7 @@ export default function AssessmentsPage() {
                 {assessments.sort((a,b) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime()).map((assessment) => (
                   <TableRow key={assessment.id}>
                     <TableCell className="font-medium">{assessment.title}</TableCell>
-                    <TableCell>{assessment.topic}</TableCell>
+                    <TableCell>{courses.find(c => c.id === assessment.courseId)?.name || 'N/A'}</TableCell>
                     <TableCell className="hidden md:table-cell">{format(new Date(assessment.testDate), "MMM dd, yyyy")}</TableCell>
                     <TableCell>{assessment.totalMarks}</TableCell>
                     <TableCell className="text-right">
@@ -332,3 +364,5 @@ export default function AssessmentsPage() {
     </div>
   );
 }
+
+    
