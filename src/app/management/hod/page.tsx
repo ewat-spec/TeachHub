@@ -3,17 +3,11 @@
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, BookCopy, TrendingUp, Archive, MessageSquare, Send, GanttChartSquare, UserCheck } from "lucide-react";
+import { Users, BookCopy, TrendingUp, Archive, GanttChartSquare, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import React from "react";
 import Link from "next/link";
 
 export default function HODDashboardPage() {
-  const { toast } = useToast();
-
   const hodFeatures = [
     {
       title: "Department Staff & Workload",
@@ -40,10 +34,10 @@ export default function HODDashboardPage() {
       link: "#courses",
     },
     {
-      title: "Student Success Metrics",
-      description: "Track student progress, analyze academic results, and identify departmental support needs.",
+      title: "AI Student Performance Analysis",
+      description: "Leverage AI to analyze student marks, identify trends, and highlight at-risk or high-achieving students.",
       icon: <TrendingUp className="h-6 w-6 text-primary" />,
-      link: "#student-success",
+      link: "/management/hod/performance-analysis",
     },
     {
       title: "Resource Allocation",

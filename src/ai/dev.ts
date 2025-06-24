@@ -9,3 +9,4 @@ import '@/ai/tools/monteCarloTool.ts';
 import '@/ai/tools/wolframAlphaTool.ts'; // Import the Wolfram Alpha tool
 import '@/ai/flows/ask-academic-question-flow.ts';
 import '@/ai/flows/analyze-trainer-performance-flow.ts';
+import '@/ai/flows/analyze-student-performance-flow.ts';
