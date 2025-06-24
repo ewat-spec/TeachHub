@@ -1,12 +1,13 @@
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, ClipboardList, GanttChartSquare, Landmark, Users } from "lucide-react"; // Ensured Landmark and Users icons
+import { Briefcase, ClipboardList, GanttChartSquare, Landmark, Users, HeartHandshake } from "lucide-react";
 
 export default function ManagementDashboardPage() {
   const managementSections = [
     { title: "Director Dashboard", icon: <Briefcase className="h-6 w-6 text-primary" />, description: "Access director-specific tools and overviews.", link: "/management/director" },
     { title: "HOD Dashboard", icon: <ClipboardList className="h-6 w-6 text-primary" />, description: "Access tools for Heads of Academic Departments.", link: "/management/hod" },
+    { title: "Dean of Students", icon: <HeartHandshake className="h-6 w-6 text-primary" />, description: "Manage student welfare, clubs, and disciplinary actions.", link: "/management/dean" },
     { title: "Timetabler Dashboard", icon: <GanttChartSquare className="h-6 w-6 text-primary" />, description: "Manage and analyze institution timetables.", link: "/management/timetabler" },
     { title: "Student Registry", icon: <Users className="h-6 w-6 text-primary" />, description: "View, add, and manage student records in the registry.", link: "/management/students" },
     { title: "Finance Management", icon: <Landmark className="h-6 w-6 text-primary" />, description: "Tools for fee collection, payment tracking, and financial reporting.", link: "/management/finance" },

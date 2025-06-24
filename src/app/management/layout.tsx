@@ -20,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare, Landmark, Users } from "lucide-react";
+import { LayoutGrid, Briefcase, ClipboardList, GanttChartSquare, Landmark, Users, HeartHandshake } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -33,6 +33,7 @@ const navItems: NavItem[] = [
   { href: "/management/dashboard", icon: <LayoutGrid />, label: "Management Hub", tooltip: "Management Dashboard" },
   { href: "/management/director", icon: <Briefcase />, label: "Director", tooltip: "Director Dashboard" },
   { href: "/management/hod", icon: <ClipboardList />, label: "HOD", tooltip: "HOD Dashboard" },
+  { href: "/management/dean", icon: <HeartHandshake />, label: "Dean of Students", tooltip: "Student Welfare & Affairs" },
   { href: "/management/timetabler", icon: <GanttChartSquare />, label: "Timetabler", tooltip: "Timetabler Dashboard" },
   { href: "/management/students", icon: <Users />, label: "Student Registry", tooltip: "Manage Student Records" },
   { href: "/management/finance", icon: <Landmark />, label: "Finance", tooltip: "Finance Management" },
