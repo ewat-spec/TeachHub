@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   { href: "/management/director", icon: <Briefcase />, label: "Director", tooltip: "Director Dashboard" },
   { href: "/management/hod", icon: <ClipboardList />, label: "HOD", tooltip: "HOD Dashboard" },
   { href: "/management/timetabler", icon: <GanttChartSquare />, label: "Timetabler", tooltip: "Timetabler Dashboard" },
-  { href: "/management/students", icon: <Users />, label: "Student Register", tooltip: "Manage Student Records" },
+  { href: "/management/students", icon: <Users />, label: "Student Registry", tooltip: "Manage Student Records" },
   { href: "/management/finance", icon: <Landmark />, label: "Finance", tooltip: "Finance Management" },
 ];
 

@@ -31,7 +31,7 @@ const studentFormSchema = z.object({
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
 
-export default function StudentRegisterPage() {
+export default function StudentRegistryPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,7 +124,7 @@ export default function StudentRegisterPage() {
   if (!isClient) {
     return (
       <div className="container mx-auto">
-        <PageHeader title="Student Register" description="Loading student records..." />
+        <PageHeader title="Student Registry" description="Loading student records..." />
         <div className="space-y-6 animate-pulse">
           <Card><CardHeader><div className="h-8 w-1/3 bg-muted rounded"></div></CardHeader><CardContent className="h-64 bg-muted rounded"></CardContent></Card>
         </div>
@@ -135,15 +135,15 @@ export default function StudentRegisterPage() {
   return (
     <div className="container mx-auto">
       <PageHeader
-        title="Student Register"
-        description="View, add, edit, and manage all student records in the institution."
+        title="Student Registry"
+        description="View, add, edit, and manage all student records in the registry."
         actions={<Button onClick={openNewModal}><PlusCircle className="mr-2 h-4 w-4"/> Add New Student</Button>}
       />
 
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>All Students ({filteredStudents.length})</CardTitle>
-          <CardDescription>A complete list of all registered students.</CardDescription>
+          <CardDescription>A complete list of all students in the registry.</CardDescription>
           <div className="mt-4">
             <Input 
                 placeholder="Search by name, admission no, or course..."
@@ -184,7 +184,7 @@ export default function StudentRegisterPage() {
              <div className="text-center py-10 text-muted-foreground">
                 <Users className="mx-auto h-12 w-12 mb-4"/>
                 <p className="font-semibold">No Students Found</p>
-                <p className="text-sm">{searchTerm ? `Your search for "${searchTerm}" did not match any students.` : "There are no students in the register. Click 'Add New Student' to begin."}</p>
+                <p className="text-sm">{searchTerm ? `Your search for "${searchTerm}" did not match any students.` : "There are no students in the registry. Click 'Add New Student' to begin."}</p>
              </div>
           )}
         </CardContent>

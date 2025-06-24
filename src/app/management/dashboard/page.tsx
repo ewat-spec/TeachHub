@@ -8,7 +8,7 @@ export default function ManagementDashboardPage() {
     { title: "Director Dashboard", icon: <Briefcase className="h-6 w-6 text-primary" />, description: "Access director-specific tools and overviews.", link: "/management/director" },
     { title: "HOD Dashboard", icon: <ClipboardList className="h-6 w-6 text-primary" />, description: "Access tools for Heads of Academic Departments.", link: "/management/hod" },
     { title: "Timetabler Dashboard", icon: <GanttChartSquare className="h-6 w-6 text-primary" />, description: "Manage and analyze institution timetables.", link: "/management/timetabler" },
-    { title: "Student Register", icon: <Users className="h-6 w-6 text-primary" />, description: "View, add, and manage student registration records.", link: "/management/students" },
+    { title: "Student Registry", icon: <Users className="h-6 w-6 text-primary" />, description: "View, add, and manage student records in the registry.", link: "/management/students" },
     { title: "Finance Management", icon: <Landmark className="h-6 w-6 text-primary" />, description: "Tools for fee collection, payment tracking, and financial reporting.", link: "/management/finance" },
   ];
 
@@ -41,7 +41,7 @@ export default function ManagementDashboardPage() {
         <CardContent>
           <p className="text-muted-foreground">
             This portal provides access to specialized dashboards for various management roles within TeachHub.
-            Select a dashboard above to proceed to its dedicated tools and information. The new Finance Management and Student Register sections are now available.
+            Select a dashboard above to proceed to its dedicated tools and information. The new Finance Management and Student Registry sections are now available.
           </p>
         </CardContent>
       </Card>
