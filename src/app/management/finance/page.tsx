@@ -188,7 +188,6 @@ export default function AdminFinancePage() {
               <SelectValue placeholder="Select a student to view/manage their finances..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="" disabled>-- Select a Student --</SelectItem>
               {students.map(student => (
                 <SelectItem key={student.id} value={student.id}>
                   {student.name} ({student.admissionNumber}) - Bal: KES {student.outstandingBalance.toLocaleString()}
@@ -324,10 +323,10 @@ export default function AdminFinancePage() {
               )}/>
               <FormField control={paymentForm.control} name="applyToInvoiceId" render={({ field }) => (
                   <FormItem><FormLabel>Apply to Invoice (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                    <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || ""}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select invoice if applicable" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {selectedStudent?.invoices.filter(inv => inv.status !== 'Paid').map(inv => (
                           <SelectItem key={inv.id} value={inv.id}>{inv.invoiceNumber} (Due: {format(new Date(inv.dueDate), "PP")}, Bal: KES {(inv.totalAmount-inv.amountPaid).toLocaleString()})</SelectItem>
                         ))}
