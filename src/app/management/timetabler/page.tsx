@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 // Corrected import path
 import { getAiTimetableAnalysis } from "@/app/(app)/schedule/actions"; 
 import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
+import { Badge } from "@/components/ui/badge";
 
 // Mock data - In a real app, this would come from a central service or database
 const mockTrainers = [
@@ -28,11 +29,25 @@ const mockTrainers = [
 ];
 
 const initialScheduledClasses: AnalyzeTimetableInput['scheduledClasses'] = [
-  { topic: "Introduction to React", trainerName: "Jane Doe", dayOfWeek: format(new Date("2024-09-15"), "EEEE"), startTime: "10:00", durationHours: 2, venue: "Room A101" },
-  { topic: "Advanced CSS Techniques", trainerName: "Alice Johnson", dayOfWeek: format(new Date("2024-09-16"), "EEEE"), startTime: "14:00", durationHours: 1.5, venue: "Online Webinar" },
-  { topic: "State Management in React", trainerName: "Jane Doe", dayOfWeek: format(new Date("2024-09-17"), "EEEE"), startTime: "09:00", durationHours: 3, venue: "Room B203" },
-  { topic: "Python for Data Science", trainerName: "John Smith", dayOfWeek: format(new Date("2024-09-15"), "EEEE"), startTime: "10:00", durationHours: 2, venue: "Lab 1" }, // Potential clash with Jane Doe
-  { topic: "Project Management 101", trainerName: "Robert Brown", dayOfWeek: format(new Date("2024-09-18"), "EEEE"), startTime: "11:00", durationHours: 2, venue: "Room A101" },
+  // Monday
+  { topic: "Introduction to React", trainerName: "Jane Doe", dayOfWeek: "Monday", startTime: "10:00", durationHours: 2, venue: "Room A101" },
+  { topic: "Python for Data Science", trainerName: "John Smith", dayOfWeek: "Monday", startTime: "10:00", durationHours: 2, venue: "Lab 1" }, // No clash yet
+  { topic: "Advanced CSS Techniques", trainerName: "Alice Johnson", dayOfWeek: "Monday", startTime: "14:00", durationHours: 1.5, venue: "Online Webinar" },
+  
+  // Tuesday - A clash
+  { topic: "State Management in React", trainerName: "Jane Doe", dayOfWeek: "Tuesday", startTime: "09:00", durationHours: 3, venue: "Room B203" },
+  { topic: "Beginner Python", trainerName: "John Smith", dayOfWeek: "Tuesday", startTime: "09:00", durationHours: 2, venue: "Room B203" }, // Venue Clash!
+  
+  // Wednesday - A common course and a potential clash
+  { topic: "COM101: Communication Skills", trainerName: "Robert Brown", dayOfWeek: "Wednesday", startTime: "14:00", durationHours: 2, venue: "Lecture Hall 1", isCommonCourse: true },
+  { topic: "Advanced React Patterns", trainerName: "Jane Doe", dayOfWeek: "Wednesday", startTime: "14:00", durationHours: 2, venue: "Room A101" }, // Potential clash if React students must take COM101
+
+  // Thursday
+  { topic: "Project Management 101", trainerName: "Robert Brown", dayOfWeek: "Thursday", startTime: "11:00", durationHours: 2, venue: "Room A101" },
+  
+  // Friday - A trainer clash
+  { topic: "Data Structures in Python", trainerName: "John Smith", dayOfWeek: "Friday", startTime: "10:00", durationHours: 3, venue: "Lab 2" },
+  { topic: "Intro to Machine Learning", trainerName: "John Smith", dayOfWeek: "Friday", startTime: "11:00", durationHours: 2, venue: "Lab 3" }, // Trainer Clash!
 ];
 
 const curriculumFormSchema = z.object({
@@ -57,7 +72,7 @@ export default function TimetablerDashboardPage() {
   const curriculumUiForm = useForm<CurriculumFormValues>({
     resolver: zodResolver(curriculumFormSchema),
     defaultValues: {
-      guidelines: "E.g., Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes. Trainer John Smith is unavailable on Friday afternoons. Common course 'COM101' for all Year 1 students must be on Wednesday afternoon.",
+      guidelines: "Maths: 5 hours/week, prefer morning slots. English: 4 hours/week. Science labs need 2-hour blocks. Max 2 consecutive theory classes. Trainer John Smith is unavailable on Friday afternoons. Common course 'COM101: Communication Skills' is mandatory for all Year 1 React and Python students.",
     },
      mode: "onChange",
   });
@@ -294,8 +309,3 @@ export default function TimetablerDashboardPage() {
     </div>
   );
 }
-    
-
-    
-
-    
