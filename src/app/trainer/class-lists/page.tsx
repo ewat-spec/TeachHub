@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -10,20 +11,36 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle, Save, UsersRound, Printer, FileSpreadsheet } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Save, Printer, FileSpreadsheet, PlusCircle, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
-import type { Course, Marksheet } from "./data";
-import { getTrainerCourses, getMarksheetData, saveMarks } from "./actions";
+import type { Course, Marksheet, CourseResource } from "./data";
+import { getTrainerCourses, getMarksheetData, saveMarks, updateCourseResources } from "./actions";
+import { Badge } from "@/components/ui/badge";
 
 // Type for the state that holds the current marks in the UI
 type MarksState = Record<string, { mark: string; comments: string; isDirty: boolean }>;
 
-export default function MarksheetPage() {
+const resourceTypes = ["PDF", "Video", "Link", "Document", "Image"] as const;
+
+const resourceFormSchema = z.object({
+  id: z.string(),
+  title: z.string().min(3, "Title must be at least 3 characters."),
+  url: z.string().url("Please enter a valid URL."),
+  type: z.enum(resourceTypes, { required_error: "Please select a resource type."}),
+});
+type ResourceFormValues = z.infer<typeof resourceFormSchema>;
+
+
+export default function CoursesAndGradingPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
-  const [isLoadingMarksheet, setIsLoadingMarksheet] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [courses, setCourses] = useState<Course[]>([]);
@@ -32,6 +49,16 @@ export default function MarksheetPage() {
 
   // State to manage the marks entered in the input fields
   const [marksState, setMarksState] = useState<MarksState>({});
+  
+  // State for resource management
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<CourseResource | null>(null);
+
+  const resourceForm = useForm<ResourceFormValues>({
+    resolver: zodResolver(resourceFormSchema),
+    defaultValues: { id: "", title: "", url: "", type: "Link" },
+  });
+
 
   const fetchCourses = useCallback(async () => {
     setIsLoadingCourses(true);
@@ -56,7 +83,7 @@ export default function MarksheetPage() {
     setMarksState({});
 
     if (courseId) {
-      setIsLoadingMarksheet(true);
+      setIsLoadingData(true);
       try {
         const data = await getMarksheetData(courseId);
         setMarksheetData(data);
@@ -76,9 +103,9 @@ export default function MarksheetPage() {
           setMarksState(initialMarks);
         }
       } catch (error) {
-        toast({ title: "Error Loading Marksheet", description: error instanceof Error ? error.message : "Could not fetch marksheet data.", variant: "destructive" });
+        toast({ title: "Error Loading Data", description: error instanceof Error ? error.message : "Could not fetch course data.", variant: "destructive" });
       } finally {
-        setIsLoadingMarksheet(false);
+        setIsLoadingData(false);
       }
     }
   }, [toast]);
@@ -144,6 +171,67 @@ export default function MarksheetPage() {
     }
     setIsSaving(false);
   };
+  
+  const handleResourceFormSubmit = async (data: ResourceFormValues) => {
+    if (!marksheetData) return;
+    
+    const currentResources = marksheetData.course.resources || [];
+    let updatedResources: CourseResource[];
+
+    if (editingResource) {
+        updatedResources = currentResources.map(r => r.id === editingResource.id ? data : r);
+    } else {
+        updatedResources = [...currentResources, { ...data, id: `res_${Date.now()}` }];
+    }
+
+    setIsSaving(true);
+    const result = await updateCourseResources(marksheetData.course.id, updatedResources);
+    setIsSaving(false);
+
+    if (result.success) {
+        toast({ title: editingResource ? "Resource Updated" : "Resource Added", description: result.message, action: <CheckCircle className="text-green-500"/> });
+        setMarksheetData(prev => prev ? ({ ...prev, course: { ...prev.course, resources: updatedResources }}) : null);
+        setIsResourceModalOpen(false);
+    } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+    }
+  };
+
+  const handleOpenResourceModal = (resource: CourseResource | null) => {
+    setEditingResource(resource);
+    if (resource) {
+        resourceForm.reset(resource);
+    } else {
+        resourceForm.reset({ id: "", title: "", url: "", type: "Link" });
+    }
+    setIsResourceModalOpen(true);
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!marksheetData) return;
+    const updatedResources = (marksheetData.course.resources || []).filter(r => r.id !== resourceId);
+    
+    setIsSaving(true);
+    const result = await updateCourseResources(marksheetData.course.id, updatedResources);
+    setIsSaving(false);
+    
+    if (result.success) {
+        toast({ title: "Resource Deleted", description: result.message, variant: "destructive" });
+        setMarksheetData(prev => prev ? ({ ...prev, course: { ...prev.course, resources: updatedResources }}) : null);
+    } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+    }
+  };
+
+  const getResourceTypeIcon = (type: CourseResource['type']) => {
+    switch (type) {
+        case 'PDF': return <FileText className="h-5 w-5 text-red-500" />;
+        case 'Video': return <Video className="h-5 w-5 text-blue-500" />;
+        case 'Image': return <FileText className="h-5 w-5 text-green-500" />;
+        case 'Document': return <FileText className="h-5 w-5 text-purple-500" />;
+        case 'Link': default: return <LinkIcon className="h-5 w-5 text-gray-500" />;
+    }
+  };
 
   const handlePrint = () => {
       window.print();
@@ -154,7 +242,7 @@ export default function MarksheetPage() {
   if (!isClient) {
     return (
       <div className="space-y-6 animate-pulse">
-        <PageHeader title="Course Marksheets" />
+        <PageHeader title="Courses & Grading" />
         <Card><CardContent className="h-24 bg-muted rounded"></CardContent></Card>
         <Card><CardContent className="h-64 bg-muted rounded"></CardContent></Card>
       </div>
@@ -182,8 +270,8 @@ export default function MarksheetPage() {
       `}</style>
       <div className="space-y-6">
         <PageHeader
-          title="Course Marksheets"
-          description="Select a course to view the marksheet, enter grades, and print."
+          title="Courses & Grading"
+          description="Select a course to manage its resources and grade assessments."
         />
         <Card className="shadow-lg no-print">
           <CardHeader>
@@ -207,14 +295,65 @@ export default function MarksheetPage() {
           </CardContent>
         </Card>
 
-        {isLoadingMarksheet && (
+        {isLoadingData && (
           <div className="flex items-center justify-center py-10 no-print">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-2 text-muted-foreground">Loading marksheet data...</p>
+            <p className="ml-2 text-muted-foreground">Loading course data...</p>
           </div>
         )}
 
-        {marksheetData && !isLoadingMarksheet && (
+        {marksheetData && !isLoadingData && (
+        <div className="space-y-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                    <div>
+                        <CardTitle className="font-headline text-2xl text-primary flex items-center">
+                           Course Resources
+                        </CardTitle>
+                        <CardDescription className="no-print">
+                           Manage shared resources for {marksheetData.course.name}. For PDFs or other files, upload to a service like Google Drive and paste the link here.
+                        </CardDescription>
+                    </div>
+                     <Button onClick={() => handleOpenResourceModal(null)} className="mt-4 sm:mt-0 no-print">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Resource
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {(marksheetData.course.resources || []).length > 0 ? (
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[40px]"></TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {marksheetData.course.resources?.map(resource => (
+                                <TableRow key={resource.id}>
+                                    <TableCell>{getResourceTypeIcon(resource.type)}</TableCell>
+                                    <TableCell>
+                                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center">
+                                            {resource.title} <ExternalLink className="h-4 w-4 ml-2 opacity-70" />
+                                        </a>
+                                    </TableCell>
+                                    <TableCell><Badge variant="outline">{resource.type}</Badge></TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenResourceModal(resource)} className="mr-2 hover:text-primary"><Edit className="h-4 w-4"/><span className="sr-only">Edit</span></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteResource(resource.id)} className="hover:text-destructive"><Trash2 className="h-4 w-4"/><span className="sr-only">Delete</span></Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                     </Table>
+                ): (
+                    <p className="text-muted-foreground text-center py-6">No resources have been added for this course yet.</p>
+                )}
+            </CardContent>
+          </Card>
           <Card className="shadow-lg printable-area">
             <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
@@ -302,8 +441,46 @@ export default function MarksheetPage() {
               )}
             </CardContent>
           </Card>
+        </div>
         )}
       </div>
+
+       <Dialog open={isResourceModalOpen} onOpenChange={setIsResourceModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-headline">{editingResource ? "Edit Resource" : "Add New Resource"}</DialogTitle>
+            <DialogDescription>
+              {editingResource ? `Update the details for this resource.` : `Add a new resource link for ${marksheetData?.course.name}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...resourceForm}>
+            <form onSubmit={resourceForm.handleSubmit(handleResourceFormSubmit)} className="space-y-4 py-4">
+              <FormField control={resourceForm.control} name="title" render={({ field }) => (
+                  <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., Engine Diagram PDF" {...field} /></FormControl><FormMessage /></FormItem>
+              )}/>
+               <FormField control={resourceForm.control} name="url" render={({ field }) => (
+                  <FormItem><FormLabel>URL</FormLabel><FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+              )}/>
+              <FormField control={resourceForm.control} name="type" render={({ field }) => (
+                  <FormItem><FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select resource type" /></SelectTrigger></FormControl>
+                        <SelectContent>{resourceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage/>
+                  </FormItem>
+              )}/>
+              <DialogFooter className="mt-4">
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                  {editingResource ? "Save Changes" : "Add Resource"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore';
-import type { Course, Student, AssessmentGrading, StudentMarkEntry, Marksheet } from './data';
+import { collection, query, where, getDocs, doc, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
+import type { Course, Student, AssessmentGrading, StudentMarkEntry, Marksheet, CourseResource } from './data';
 
 const CURRENT_TRAINER_ID = "trainerJane";
 
@@ -120,4 +120,25 @@ export async function saveMarks(
         console.error("Error saving marks in batch:", e);
         return { success: false, message: "An error occurred while saving to the database.", errors: [] };
     }
+}
+
+export async function updateCourseResources(courseId: string, resources: CourseResource[]): Promise<{ success: boolean; message: string }> {
+  try {
+    if (!courseId) {
+      throw new Error("Course ID is required.");
+    }
+    // Firestore works best with plain objects, so convert any class instances if necessary (though our interface is fine).
+    const resourcesToSave = resources.map(r => ({...r}));
+
+    const courseDoc = doc(db, 'courses', courseId);
+    await updateDoc(courseDoc, { resources: resourcesToSave });
+
+    return { success: true, message: "Course resources updated successfully." };
+  } catch (error) {
+    console.error("Error updating course resources:", error);
+    if (error instanceof Error) {
+        throw new Error(`Failed to update resources: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred while updating resources.");
+  }
 }

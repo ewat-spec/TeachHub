@@ -4,14 +4,20 @@ export interface Student {
   admissionNumber: string;
 }
 
+export interface CourseResource {
+  id: string;
+  title: string;
+  url: string;
+  type: 'PDF' | 'Video' | 'Link' | 'Document' | 'Image';
+}
+
 export interface Course {
   id: string;
   name: string;
   level: string;
   code: string;
   trainerId: string; // To associate courses with a trainer
-  sharedVideoLinks?: string[];
-  sharedImageLinks?: string[];
+  resources?: CourseResource[];
 }
 
 export interface Enrollment {
