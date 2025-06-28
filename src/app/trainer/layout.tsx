@@ -20,7 +20,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit, MessageCircle, BookMark } from "lucide-react";
+import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit, MessageCircle, BookMarked } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
   { href: "/trainer/schedule", icon: <CalendarDays />, label: "My Schedule", tooltip: "My Class Schedule" },
   { href: "/trainer/lesson-plans", icon: <BookOpenText />, label: "My Lesson Plans", tooltip: "My Lesson Plans" },
   { href: "/trainer/assessments", icon: <ClipboardCheck />, label: "My Assessments", tooltip: "My Assessments & CATs" },
-  { href: "/trainer/class-lists", icon: <BookMark />, label: "Courses & Grading", tooltip: "Manage Course Resources & Marksheets" },
+  { href: "/trainer/class-lists", icon: <BookMarked />, label: "Courses & Grading", tooltip: "Manage Course Resources & Marksheets" },
   { href: "/trainer/portfolios", icon: <FolderKanban />, label: "Student Portfolios", tooltip: "Student Portfolios of Evidence" },
   { href: "/trainer/student-questions", icon: <MessageCircle />, label: "Student Questions", tooltip: "View Questions from Students" },
   { href: "/trainer/notifications", icon: <Bell />, label: "My Notifications", tooltip: "My Notifications" },
