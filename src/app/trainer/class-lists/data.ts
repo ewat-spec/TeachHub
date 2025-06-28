@@ -1,4 +1,3 @@
-
 export interface Student {
   id: string;
   name: string;
@@ -22,19 +21,27 @@ export interface Enrollment {
 
 export interface AssessmentGrading {
   id: string;
-  courseId: string; // The course this assessment belongs to
-  topic: string; // The topic of the assessment
+  courseId: string;
+  topic: string; 
   title: string;
   totalMarks: number;
 }
 
 export interface StudentMarkEntry {
   studentId: string;
-  studentName?: string; // Optional for submission, but useful for form
+  studentName?: string; 
   assessmentId: string;
-  mark?: number | string | null; // Use string to allow empty input, then coerce
+  mark?: number | string | null; 
   comments?: string;
 }
+
+export interface Marksheet {
+  course: Course;
+  students: Student[];
+  assessments: AssessmentGrading[];
+  marks: StudentMarkEntry[];
+}
+
 
 // Mock current trainer ID
 export const CURRENT_TRAINER_ID = "trainerJane";

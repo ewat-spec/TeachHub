@@ -1,11 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,501 +8,302 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel as RHFFormLabel } from "@/components/ui/form"; // Renamed FormLabel to avoid conflict
-import { Label } from "@/components/ui/label"; // Import basic Label
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, CheckCircle, Save, UsersRound, ClipboardEdit, FileText, Share2 } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, Save, UsersRound, Printer, FileSpreadsheet } from "lucide-react";
 
-import type { Course, Student, AssessmentGrading, StudentMarkEntry } from "./data";
-import { 
-  getTrainerCourses, 
-  getEnrolledStudents, 
-  getAssessmentsForCourse, 
-  getStudentMarksForAssessment,
-  saveAllStudentMarks,
-  updateCourseSharedResources
-} from "./actions";
+import type { Course, Marksheet } from "./data";
+import { getTrainerCourses, getMarksheetData, saveMarks } from "./actions";
 
-const resourceFormSchema = z.object({
-  videoLinksString: z.string().optional(),
-  imageLinksString: z.string().optional(),
-});
-type ResourceFormValues = z.infer<typeof resourceFormSchema>;
+// Type for the state that holds the current marks in the UI
+type MarksState = Record<string, { mark: string; comments: string; isDirty: boolean }>;
 
-const markEntrySchema = z.object({
-  studentId: z.string(),
-  studentName: z.string(), 
-  assessmentId: z.string(),
-  mark: z.union([z.string().optional(), z.number().optional()]), 
-  comments: z.string().optional(),
-});
-
-const gradingFormSchema = z.object({
-  marks: z.array(markEntrySchema),
-});
-type GradingFormValues = z.infer<typeof gradingFormSchema>;
-
-
-export default function ClassListsPage() {
+export default function MarksheetPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
-  const [isLoadingResources, setIsLoadingResources] = useState(false);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [isLoadingAssessments, setIsLoadingAssessments] = useState(false);
-  const [isLoadingMarks, setIsLoadingMarks] = useState(false);
+  const [isLoadingMarksheet, setIsLoadingMarksheet] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [courses, setCourses] = useState<Course[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [assessments, setAssessments] = useState<AssessmentGrading[]>([]);
-  const [currentAssessmentDetails, setCurrentAssessmentDetails] = useState<AssessmentGrading | null>(null);
-
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
+  const [marksheetData, setMarksheetData] = useState<Marksheet | null>(null);
 
+  // State to manage the marks entered in the input fields
+  const [marksState, setMarksState] = useState<MarksState>({});
 
-  const resourceForm = useForm<ResourceFormValues>({
-    resolver: zodResolver(resourceFormSchema),
-    defaultValues: {
-      videoLinksString: "",
-      imageLinksString: "",
-    },
-    mode: "onChange",
-  });
-
-  const gradingForm = useForm<GradingFormValues>({
-    resolver: zodResolver(gradingFormSchema),
-    defaultValues: {
-      marks: [],
-    },
-    mode: "onChange",
-  });
-
-  const { fields: marksFields, replace: replaceMarks } = useFieldArray({
-    control: gradingForm.control,
-    name: "marks",
-  });
-
+  const fetchCourses = useCallback(async () => {
+    setIsLoadingCourses(true);
+    try {
+      const fetchedCourses = await getTrainerCourses();
+      setCourses(fetchedCourses);
+    } catch (error) {
+      toast({ title: "Error Fetching Courses", description: error instanceof Error ? error.message : "Could not fetch courses.", variant: "destructive" });
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     setIsClient(true);
-    async function fetchInitialCourses() {
-      setIsLoadingCourses(true);
-      try {
-        const fetchedCourses = await getTrainerCourses();
-        setCourses(fetchedCourses);
-      } catch (error) {
-        toast({ title: "Error Fetching Courses", description: error instanceof Error ? error.message : "Could not fetch courses.", variant: "destructive" });
-      } finally {
-        setIsLoadingCourses(false);
-      }
-    }
-    fetchInitialCourses();
-  }, [toast]);
+    fetchCourses();
+  }, [fetchCourses]);
 
   const handleCourseChange = useCallback(async (courseId: string) => {
     setSelectedCourseId(courseId);
-    setSelectedAssessmentId(""); 
-    setStudents([]);
-    setAssessments([]);
-    replaceMarks([]);
-    resourceForm.reset({ videoLinksString: "", imageLinksString: "" }); 
+    setMarksheetData(null);
+    setMarksState({});
 
     if (courseId) {
-      setIsLoadingResources(true);
-      setIsLoadingStudents(true);
-      setIsLoadingAssessments(true);
+      setIsLoadingMarksheet(true);
       try {
-        const currentCourse = courses.find(c => c.id === courseId);
-        if (currentCourse) {
-            resourceForm.setValue("videoLinksString", (currentCourse.sharedVideoLinks || []).join(', '));
-            resourceForm.setValue("imageLinksString", (currentCourse.sharedImageLinks || []).join(', '));
-        }
-
-        const [fetchedStudents, fetchedAssessments] = await Promise.all([
-          getEnrolledStudents(courseId),
-          getAssessmentsForCourse(courseId)
-        ]);
-        setStudents(fetchedStudents);
-        setAssessments(fetchedAssessments);
-      } catch (error) {
-        toast({ title: "Error Loading Course Data", description: error instanceof Error ? error.message : "Could not fetch students or assessments.", variant: "destructive" });
-      } finally {
-        setIsLoadingResources(false);
-        setIsLoadingStudents(false);
-        setIsLoadingAssessments(false);
-      }
-    }
-  }, [courses, resourceForm, replaceMarks, toast]);
-  
-  useEffect(() => {
-    if (selectedCourseId && selectedAssessmentId && students.length > 0) {
-      const assessmentDetails = assessments.find(a => a.id === selectedAssessmentId);
-      setCurrentAssessmentDetails(assessmentDetails || null);
-      setIsLoadingMarks(true);
-      async function fetchAndPopulateMarks() {
-        try {
-          const existingMarks = await getStudentMarksForAssessment(selectedAssessmentId);
-          const marksForForm = students.map(student => {
-            const existingMark = existingMarks.find(m => m.studentId === student.id);
-            return {
-              studentId: student.id,
-              studentName: student.name,
-              assessmentId: selectedAssessmentId,
-              mark: existingMark?.mark !== undefined ? String(existingMark.mark) : "",
-              comments: existingMark?.comments || "",
-            };
+        const data = await getMarksheetData(courseId);
+        setMarksheetData(data);
+        if (data) {
+          const initialMarks: MarksState = {};
+          data.students.forEach(student => {
+            data.assessments.forEach(assessment => {
+              const markEntry = data.marks.find(m => m.studentId === student.id && m.assessmentId === assessment.id);
+              const key = `${student.id}_${assessment.id}`;
+              initialMarks[key] = {
+                mark: markEntry?.mark !== null && markEntry?.mark !== undefined ? String(markEntry.mark) : "",
+                comments: markEntry?.comments || "",
+                isDirty: false,
+              };
+            });
           });
-          replaceMarks(marksForForm);
-        } catch (error) {
-           toast({ title: "Error Loading Marks", description: error instanceof Error ? error.message : "Could not fetch student marks.", variant: "destructive" });
-            const emptyMarksForForm = students.map(student => ({
-                studentId: student.id,
-                studentName: student.name,
-                assessmentId: selectedAssessmentId,
-                mark: "",
-                comments: "",
-            }));
-            replaceMarks(emptyMarksForForm);
-        } finally {
-            setIsLoadingMarks(false);
+          setMarksState(initialMarks);
         }
+      } catch (error) {
+        toast({ title: "Error Loading Marksheet", description: error instanceof Error ? error.message : "Could not fetch marksheet data.", variant: "destructive" });
+      } finally {
+        setIsLoadingMarksheet(false);
       }
-      fetchAndPopulateMarks();
-    } else {
-      replaceMarks([]); 
-      setCurrentAssessmentDetails(null);
     }
-  }, [selectedCourseId, selectedAssessmentId, students, assessments, replaceMarks, toast]);
+  }, [toast]);
 
-  const onResourceSubmit = async (data: ResourceFormValues) => {
-    if (!selectedCourseId) {
-      toast({ title: "No Course Selected", description: "Please select a course to update resources.", variant: "destructive" });
+  const handleMarkChange = (studentId: string, assessmentId: string, value: string) => {
+    const key = `${studentId}_${assessmentId}`;
+    setMarksState(prev => ({
+      ...prev,
+      [key]: { ...(prev[key] || { comments: '', mark: '' }), mark: value, isDirty: true },
+    }));
+  };
+  
+  const handleCommentChange = (studentId: string, assessmentId: string, value: string) => {
+    const key = `${studentId}_${assessmentId}`;
+    setMarksState(prev => ({
+        ...prev,
+        [key]: { ...(prev[key] || { comments: '', mark: '' }), comments: value, isDirty: true },
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!marksheetData) return;
+    setIsSaving(true);
+
+    const dirtyEntries = Object.entries(marksState)
+      .filter(([, value]) => value.isDirty)
+      .map(([key, value]) => {
+        const [studentId, assessmentId] = key.split('_');
+        const markAsNumber = value.mark.trim() === '' ? null : Number(value.mark);
+        return {
+          studentId,
+          assessmentId,
+          mark: markAsNumber,
+          comments: value.comments,
+        };
+      });
+
+    if (dirtyEntries.length === 0) {
+      toast({ title: "No Changes", description: "There are no changes to save." });
+      setIsSaving(false);
       return;
     }
-    setIsLoadingResources(true);
-    try {
-      const result = await updateCourseSharedResources(selectedCourseId, data.videoLinksString || "", data.imageLinksString || "");
-      if (result.success) {
-        toast({ title: "Resources Updated", description: result.message, action: <CheckCircle className="text-green-500" /> });
-        const updatedCourses = courses.map(c => 
-            c.id === selectedCourseId ? {
-                ...c, 
-                sharedVideoLinks: (data.videoLinksString || "").split(',').map(s => s.trim()).filter(s => s),
-                sharedImageLinks: (data.imageLinksString || "").split(',').map(s => s.trim()).filter(s => s)
-            } : c
-        );
-        setCourses(updatedCourses);
-      } else {
-        toast({ title: "Resource Update Error", description: result.message || "Could not update resources.", variant: "destructive" });
-      }
-    } catch (error) {
-      toast({ title: "Submission Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" });
-    } finally {
-      setIsLoadingResources(false);
-    }
-  };
-
-  const onGradingSubmit = async (data: GradingFormValues) => {
-    if (!currentAssessmentDetails || !selectedAssessmentId) {
-        toast({title: "Error", description: "No assessment selected or details are missing.", variant: "destructive"});
-        return;
-    }
-    let clientSideValidationError = false;
-    gradingForm.clearErrors(); 
-
-    const marksToSave: StudentMarkEntry[] = data.marks.map((m, index) => {
-        const markString = String(m.mark).trim();
-        let markValue: number | undefined = undefined;
-
-        if (markString === "") {
-            markValue = undefined; 
-        } else if (!/^\d*\.?\d*$/.test(markString) || isNaN(parseFloat(markString))) {
-            gradingForm.setError(`marks.${index}.mark`, { type: "manual", message: "Invalid number." });
-            clientSideValidationError = true;
-        } else {
-            markValue = parseFloat(markString);
-            if (markValue < 0 || markValue > currentAssessmentDetails.totalMarks) {
-                gradingForm.setError(`marks.${index}.mark`, { type: "manual", message: `Max: ${currentAssessmentDetails.totalMarks}` });
-                clientSideValidationError = true;
-            }
-        }
-        
-        return {
-            studentId: m.studentId,
-            assessmentId: selectedAssessmentId,
-            mark: markValue, 
-            comments: m.comments,
-        };
-    });
     
-    if (clientSideValidationError) {
-        toast({title: "Validation Error", description: "Please correct the highlighted marks before saving.", variant: "destructive"});
-        return;
-    }
+    const totalMarksMap = Object.fromEntries(marksheetData.assessments.map(a => [a.id, a.totalMarks]));
+
+    const result = await saveMarks(dirtyEntries, totalMarksMap);
     
-    try {
-      const result = await saveAllStudentMarks(marksToSave);
-      if (result.success) {
-        toast({ title: "Marks Saved", description: result.message, action: <CheckCircle className="text-green-500" /> });
-      } else {
-        toast({ title: "Saving Error", description: result.message || "Could not save all marks.", variant: "destructive" });
-        if (result.errors && result.errors.length > 0) {
-            result.errors.forEach(errMsg => {
-                toast({ title: "Individual Save Error", description: errMsg, variant: "destructive", duration: 7000 });
-            });
-        }
-      }
-    } catch (error) {
-      toast({ title: "Submission Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" });
+    if (result.success) {
+      toast({ title: "Marks Saved", description: result.message, action: <CheckCircle className="text-green-500" /> });
+      setMarksState(prev => {
+        const newState = { ...prev };
+        dirtyEntries.forEach(entry => {
+          const key = `${entry.studentId}_${entry.assessmentId}`;
+          if (newState[key]) newState[key].isDirty = false;
+        });
+        return newState;
+      });
+    } else {
+      toast({ title: "Save Error", description: result.message, variant: "destructive" });
+      result.errors.forEach(err => {
+         toast({ title: "Validation Error", description: `${err.message} for one of the students.`, variant: "destructive", duration: 7000 });
+      });
     }
+    setIsSaving(false);
   };
-  
-  const getMarkInputPlaceholder = () => {
-    return currentAssessmentDetails ? `0 - ${currentAssessmentDetails.totalMarks}` : "Enter mark";
+
+  const handlePrint = () => {
+      window.print();
   };
+
+  const hasDirtyChanges = useMemo(() => Object.values(marksState).some(m => m.isDirty), [marksState]);
 
   if (!isClient) {
     return (
       <div className="space-y-6 animate-pulse">
-        <PageHeader title="Class Lists & Grading" description="Select a class and assessment to enter student marks." />
-        <Card><CardContent className="h-20 bg-muted rounded"></CardContent></Card>
+        <PageHeader title="Course Marksheets" />
+        <Card><CardContent className="h-24 bg-muted rounded"></CardContent></Card>
         <Card><CardContent className="h-64 bg-muted rounded"></CardContent></Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Class Lists & Grading"
-        description="Select your class and an assessment to view students and enter their marks."
-      />
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center"><FileText className="mr-2 h-5 w-5 text-primary" />Select Course & Assessment</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="courseSelect">My Courses</Label>
-            <Select 
-              onValueChange={handleCourseChange} 
-              value={selectedCourseId} 
-              disabled={isLoadingCourses}
-            >
-              <SelectTrigger id="courseSelect">
-                <SelectValue placeholder={isLoadingCourses ? "Loading courses..." : "Select a course"} />
-              </SelectTrigger>
-              <SelectContent>
-                {!isLoadingCourses && courses.length === 0 && <SelectItem value="NO_COURSES_DUMMY_VALUE" disabled>No courses found</SelectItem>}
-                {courses.map(course => (
-                  <SelectItem key={course.id} value={course.id}>{course.name} ({course.level}) - {course.code}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="assessmentSelect">Assessment for Selected Course</Label>
-            <Select 
-              onValueChange={(value) => setSelectedAssessmentId(value)} 
-              value={selectedAssessmentId} 
-              disabled={!selectedCourseId || isLoadingAssessments || assessments.length === 0}
-            >
-              <SelectTrigger id="assessmentSelect">
-                <SelectValue placeholder={
-                  !selectedCourseId ? "Select a course first" : 
-                  isLoadingAssessments ? "Loading assessments..." :
-                  assessments.length === 0 ? "No assessments for this course" :
-                  "Select an assessment"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                  {assessments.map(assessment => (
-                  <SelectItem key={assessment.id} value={assessment.id}>{assessment.title} (Max: {assessment.totalMarks})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <style jsx global>{`
+        @media print {
+          body * { visibility: hidden; }
+          .printable-area, .printable-area * { visibility: visible; }
+          .printable-area { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
+          tbody { display: table-row-group; }
+          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 10pt; }
+          th { background-color: #f2f2f2; }
+          input, textarea { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; width: 100%; font-size: 10pt; }
+          textarea { resize: none; }
+        }
+      `}</style>
+      <div className="space-y-6">
+        <PageHeader
+          title="Course Marksheets"
+          description="Select a course to view the marksheet, enter grades, and print."
+        />
+        <Card className="shadow-lg no-print">
+          <CardHeader>
+            <CardTitle className="font-headline">Select Course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full md:w-1/2">
+              <Label htmlFor="courseSelect">My Courses</Label>
+              <Select onValueChange={handleCourseChange} value={selectedCourseId} disabled={isLoadingCourses}>
+                <SelectTrigger id="courseSelect">
+                  <SelectValue placeholder={isLoadingCourses ? "Loading courses..." : "Select a course"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {!isLoadingCourses && courses.length === 0 && <SelectItem value="NO_COURSES" disabled>No courses found</SelectItem>}
+                  {courses.map(course => (
+                    <SelectItem key={course.id} value={course.id}>{course.name} ({course.code})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-      {selectedCourseId && (
-        <div className="space-y-6">
-          <Form {...resourceForm} key={`resource-form-${selectedCourseId || 'EMPTY_COURSE'}`}>
-            <form onSubmit={resourceForm.handleSubmit(onResourceSubmit)}>
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-headline flex items-center"><Share2 className="mr-2 h-5 w-5 text-primary" />Manage Shared Resources for: {courses.find(c => c.id === selectedCourseId)?.name}</CardTitle>
-                  <CardDescription>Add or update comma-separated URLs for videos and images to share with students for this course.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={resourceForm.control}
-                    name="videoLinksString"
-                    render={({ field }) => (
-                      <FormItem>
-                        <RHFFormLabel>Video URLs (comma-separated)</RHFFormLabel>
-                        <FormControl>
-                          <Textarea placeholder="e.g., https://youtu.be/..., https://vimeo.com/..." {...field} className="min-h-[80px]" disabled={isLoadingResources} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={resourceForm.control}
-                    name="imageLinksString"
-                    render={({ field }) => (
-                      <FormItem>
-                        <RHFFormLabel>Image URLs (comma-separated)</RHFFormLabel>
-                        <FormControl>
-                          <Textarea placeholder="e.g., https://example.com/image1.jpg, https://example.com/image2.png" {...field} className="min-h-[80px]" disabled={isLoadingResources} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-                <CardFooter className="flex justify-end">
-                  <Button type="submit" disabled={isLoadingResources || resourceForm.formState.isSubmitting}>
-                    {isLoadingResources || resourceForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Resources
-                  </Button>
-                </CardFooter>
-              </Card>
-            </form>
-          </Form>
+        {isLoadingMarksheet && (
+          <div className="flex items-center justify-center py-10 no-print">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2 text-muted-foreground">Loading marksheet data...</p>
+          </div>
+        )}
 
-          {selectedAssessmentId && students.length > 0 && (
-             <Form {...gradingForm} key={`grading-form-${selectedCourseId || 'EMPTY_COURSE_GRADING'}-${selectedAssessmentId || 'EMPTY_ASSESSMENT'}`}>
-              <form onSubmit={gradingForm.handleSubmit(onGradingSubmit)}>
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="font-headline flex items-center">
-                      <UsersRound className="mr-2 h-5 w-5 text-primary"/>
-                      Student List for: {courses.find(c => c.id === selectedCourseId)?.name}
-                    </CardTitle>
-                    <CardDescription>
-                      Entering marks for assessment: {currentAssessmentDetails?.title} (Total Marks: {currentAssessmentDetails?.totalMarks})
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingStudents || isLoadingMarks ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="ml-2 text-muted-foreground">Loading student data...</p>
-                      </div>
-                    ) : marksFields.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[200px] sm:w-[250px]">Student Name</TableHead>
-                              <TableHead className="w-[150px] hidden sm:table-cell">Admission No.</TableHead>
-                              <TableHead className="w-[100px] sm:w-[120px]">Mark</TableHead>
-                              <TableHead>Comments (Optional)</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {marksFields.map((item, index) => {
-                              const student = students.find(s => s.id === item.studentId);
-                              return (
-                                <TableRow key={item.id}>
-                                  <TableCell className="font-medium">{item.studentName}</TableCell>
-                                  <TableCell className="hidden sm:table-cell">{student?.admissionNumber}</TableCell>
-                                  <TableCell>
-                                    <FormField
-                                      control={gradingForm.control}
-                                      name={`marks.${index}.mark`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormControl>
-                                            <Input 
-                                              type="text" 
-                                              placeholder={getMarkInputPlaceholder()}
-                                              {...field} 
-                                              onChange={e => {
-                                                const val = e.target.value;
-                                                if (val === "" || (/^\d*\.?\d*$/.test(val) && val.split('.').length <=2 && (val.split('.')[1]?.length || 0) <= 2)) {
-                                                    field.onChange(val);
-                                                    gradingForm.clearErrors(`marks.${index}.mark`); 
-                                                }
-                                              }}
-                                              className="max-w-[100px]" 
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <FormField
-                                      control={gradingForm.control}
-                                      name={`marks.${index}.comments`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormControl>
-                                            <Textarea placeholder="Any specific feedback..." {...field} className="min-h-[40px] text-sm"/>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <UsersRound className="mx-auto h-12 w-12 mb-2"/>
-                        <p>No students enrolled in this course, or no assessment selected with students.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                  {marksFields.length > 0 && (
-                    <CardFooter className="flex justify-end">
-                      <Button type="submit" disabled={gradingForm.formState.isSubmitting}>
-                        {gradingForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Save All Marks
-                      </Button>
-                    </CardFooter>
-                  )}
-                </Card>
-              </form>
-            </Form>
-          )}
-          
-          {selectedCourseId && !selectedAssessmentId && !isLoadingAssessments && assessments.length > 0 && (
-            <Card className="shadow-lg border-primary/50 mt-6">
-                <CardContent className="pt-6 text-center">
-                    <ClipboardEdit className="mx-auto h-10 w-10 text-primary mb-3"/>
-                    <p className="font-semibold text-lg text-primary">Select an Assessment</p>
-                    <p className="text-muted-foreground">Please choose an assessment from the dropdown above to proceed with grading.</p>
-                </CardContent>
-            </Card>
-          )}
-          {selectedCourseId && !isLoadingAssessments && assessments.length === 0 && (
-              <Card className="shadow-lg border-amber-500/50 mt-6">
-                <CardContent className="pt-6 text-center">
-                    <AlertTriangle className="mx-auto h-10 w-10 text-amber-600 mb-3"/>
-                    <p className="font-semibold text-lg text-amber-700">No Assessments Found</p>
-                    <p className="text-muted-foreground">There are no assessments set up for: <span className="font-medium">{courses.find(c => c.id === selectedCourseId)?.name || 'the selected course'}</span>.</p>
-                    <Button variant="link" onClick={() => toast({title: "Navigate to Assessments", description: "You can create assessments in the 'My Assessments' page."})} className="mt-2">
-                        Go to My Assessments
-                    </Button>
-                </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-    </div>
+        {marksheetData && !isLoadingMarksheet && (
+          <Card className="shadow-lg printable-area">
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                    <div>
+                        <CardTitle className="font-headline text-2xl text-primary flex items-center">
+                           <FileSpreadsheet className="mr-2 h-6 w-6"/> Marksheet: {marksheetData.course.name}
+                        </CardTitle>
+                        <CardDescription className="no-print">
+                            Enter or update marks below. Assessments are shown as columns.
+                        </CardDescription>
+                    </div>
+                    <div className="flex gap-2 mt-4 sm:mt-0 no-print">
+                        <Button variant="outline" onClick={handlePrint}>
+                            <Printer className="mr-2 h-4 w-4" /> Print Marksheet
+                        </Button>
+                        <Button onClick={handleSaveChanges} disabled={isSaving || !hasDirtyChanges}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                            Save Changes
+                        </Button>
+                    </div>
+                </div>
+                <div className="print-only hidden mt-4 border-t pt-4 text-black">
+                    <h2 className="text-xl font-bold">KENYA INDUSTRIAL TRAINING INSTITUTE</h2>
+                    <h3 className="text-lg">ASSESSMENT MARK SHEET PER UNIT OF COMPETENCY</h3>
+                    <div className="grid grid-cols-2 gap-x-4 mt-2 text-sm">
+                        <p><strong>Course Title:</strong> {marksheetData.course.name}</p>
+                        <p><strong>Unit Title:</strong> {marksheetData.course.name}</p>
+                        <p><strong>Assessment Centre Name:</strong> TeachHub Campus</p>
+                        <p><strong>Date of Review of POE:</strong> {new Date().toLocaleDateString()}</p>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+              {marksheetData.students.length > 0 && marksheetData.assessments.length > 0 ? (
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">Student Name</TableHead>
+                        {marksheetData.assessments.map(assessment => (
+                          <TableHead key={assessment.id} className="text-center min-w-[150px]">
+                            {assessment.title}
+                            <span className="block text-xs font-normal text-muted-foreground">(Total: {assessment.totalMarks})</span>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {marksheetData.students.map(student => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium sticky left-0 bg-card z-10">{student.name}</TableCell>
+                          {marksheetData.assessments.map(assessment => {
+                            const key = `${student.id}_${assessment.id}`;
+                            const currentMark = marksState[key] || { mark: '', comments: '' };
+                            return (
+                              <TableCell key={assessment.id} className="p-2 align-top">
+                                <Input
+                                  type="text"
+                                  placeholder="-"
+                                  value={currentMark.mark}
+                                  onChange={(e) => handleMarkChange(student.id, assessment.id, e.target.value)}
+                                  className="w-20 text-center mx-auto"
+                                />
+                                 <Textarea
+                                  placeholder="Comments..."
+                                  value={currentMark.comments}
+                                  onChange={(e) => handleCommentChange(student.id, assessment.id, e.target.value)}
+                                  className="w-full mt-1 text-xs min-h-[40px]"
+                                />
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                  <AlertTriangle className="mx-auto h-12 w-12 mb-4 text-amber-500" />
+                  <p className="font-semibold text-lg">Marksheet Cannot Be Displayed</p>
+                  {marksheetData.students.length === 0 && <p>There are no students enrolled in this course.</p>}
+                  {marksheetData.assessments.length === 0 && <p>There are no assessments created for this course.</p>}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
   );
 }
-
-    
