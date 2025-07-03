@@ -1,4 +1,5 @@
 
+
 // To allow direct mutation of mock data in server actions for demo
 // Removed: 'use server'; 
 
@@ -83,6 +84,12 @@ export let mockInvoicesData: Invoice[] = [
     lineItems: [{ id: "li05", description: "Course Fees - React Fundamentals", quantity: 1, unitPrice: 20000, total: 20000 }],
     subTotal: 20000, taxAmount: 0, totalAmount: 20000, amountPaid: 0, status: "Unpaid",
   },
+  {
+    id: "inv004", invoiceNumber: "INV-2024-004", studentId: "stud002",
+    dateIssued: new Date("2024-08-01").toISOString(), dueDate: new Date("2024-09-01").toISOString(),
+    lineItems: [{ id: "li06", description: "Course Fees - Safety Procedures", quantity: 1, unitPrice: 15000, total: 15000 }],
+    subTotal: 15000, taxAmount: 0, totalAmount: 15000, amountPaid: 15000, status: "Paid",
+  },
 ];
 
 export let mockPaymentsData: PaymentRecord[] = [
@@ -95,6 +102,11 @@ export let mockPaymentsData: PaymentRecord[] = [
     id: "pay002", studentId: "studentAlexDemo", invoiceId: "inv002",
     datePaid: new Date("2024-03-15").toISOString(), amount: 3500,
     paymentMethod: "Mobile Money", reference: "MPESAXYZ123", description: "Payment for Workshop Materials",
+  },
+  {
+    id: "pay004", studentId: "stud002", invoiceId: "inv004",
+    datePaid: new Date("2024-08-10").toISOString(), amount: 15000,
+    paymentMethod: "Cash", reference: "RECEIPT567", description: "Full payment for Safety Procedures",
   },
 ];
 

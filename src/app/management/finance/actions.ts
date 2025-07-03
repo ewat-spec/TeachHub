@@ -141,3 +141,20 @@ export async function generateInvoice(input: GenerateInvoiceInput): Promise<{ su
     mockInvoicesData.push(newInvoice);
     return { success: true, message: `Invoice ${newInvoiceNumber} generated for student ID ${input.studentId}.`, invoiceId: newInvoice.id };
 }
+
+export async function deleteStudent(studentId: string): Promise<{ success: boolean; message: string }> {
+  console.log("Deleting student from mock data:", studentId);
+  await delay(500);
+
+  const studentIndex = mockStudentsData.findIndex(s => s.id === studentId);
+  if (studentIndex === -1) {
+    return { success: false, message: "Student not found." };
+  }
+  
+  // Remove student and their associated invoices/payments
+  mockStudentsData.splice(studentIndex, 1);
+  mockInvoicesData = mockInvoicesData.filter(inv => inv.studentId !== studentId);
+  mockPaymentsData = mockPaymentsData.filter(pay => pay.studentId !== studentId);
+  
+  return { success: true, message: "Student and all associated financial records deleted successfully." };
+}

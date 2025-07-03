@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -91,7 +92,7 @@ export default function AdminFinancePage() {
   useEffect(() => {
     setIsClient(true);
     fetchStudents();
-  }, [toast]);
+  }, []);
 
   const handleSelectStudent = async (studentId: string) => {
     if (!studentId) {
