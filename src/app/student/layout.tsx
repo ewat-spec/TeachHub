@@ -7,13 +7,25 @@ import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { Button } from "@/components/ui/button";
 import { LogOut, UserCircle, CreditCard, LayoutDashboard, GraduationCap } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation"; 
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function StudentAppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter(); 
+  const { toast } = useToast();
 
-  const handleLogout = () => {
-    router.push('/student/login'); 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have been successfully signed out." });
+      router.push('/student/login'); 
+    } catch (error) {
+        console.error("Error signing out: ", error);
+        toast({ title: "Logout Failed", description: "An error occurred while signing out.", variant: "destructive" });
+    }
   };
   
   const showHeader = pathname !== '/student/login';
