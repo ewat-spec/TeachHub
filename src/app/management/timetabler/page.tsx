@@ -16,7 +16,7 @@ import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 // Corrected import path
-import { getAiTimetableAnalysis } from "@/app/(app)/schedule/actions"; 
+import { getAiTimetableAnalysis } from "@/app/trainer/schedule/actions"; 
 import type { AnalyzeTimetableOutput, AnalyzeTimetableInput } from "@/ai/flows/analyze-timetable-flow";
 import { Badge } from "@/components/ui/badge";
 
