@@ -25,7 +25,7 @@ export default function HomePage() {
               <LogIn className="mr-4 h-5 w-5" /> Trainer Portal
             </Button>
           </Link>
-          <Link href="/student/login" passHref className="w-full">
+          <Link href="/student" passHref className="w-full">
             <Button size="lg" variant="outline" className="w-full justify-start text-lg py-7 rounded-lg shadow-lg border-border hover:bg-primary/5">
                <GraduationCap className="mr-4 h-5 w-5" /> Student Portal
             </Button>
