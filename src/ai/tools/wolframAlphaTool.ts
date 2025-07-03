@@ -20,9 +20,9 @@ const WolframAlphaQueryOutputSchema = z.string().describe("The result from Wolfr
 type WolframAlphaQueryOutput = z.infer<typeof WolframAlphaQueryOutputSchema>;
 
 /**
- * A Genkit tool to query Wolfram Alpha.
- * This tool requires a Wolfram Alpha AppID to be set in the environment variables
- * as WOLFRAM_ALPHA_APPID.
+ * A Genkit tool to query Wolfram Alpha using the Short Answers API.
+ * This tool requires a Wolfram Alpha AppID, configured for the Short Answers API,
+ * to be set in the environment variables as WOLFRAM_ALPHA_APPID.
  */
 export const askWolframAlpha = ai.defineTool(
   {
