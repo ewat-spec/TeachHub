@@ -2,8 +2,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import React, { useState, useEffect } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
 import {
   SidebarProvider,
   Sidebar,
@@ -20,7 +25,7 @@ import {
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit, MessageCircle, BookMarked } from "lucide-react";
+import { LayoutDashboard, UserCircle2, CalendarDays, BookOpenText, Bell, ClipboardCheck, FolderKanban, ClipboardEdit, MessageCircle, BookMarked, Loader2, LogOut } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -54,11 +59,24 @@ function AppSpecificSidebarTitle() {
   return titleElement;
 }
 
-export default function TrainerAppLayout({ children }: { children: ReactNode }) {
+function TrainerAppLayoutContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have been successfully signed out." });
+      router.push('/trainer/login'); 
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      toast({ title: "Logout Failed", description: "An error occurred while signing out.", variant: "destructive" });
+    }
+  };
 
   return (
-    <SidebarProvider defaultOpen={true}>
+     <SidebarProvider defaultOpen={true}>
       <Sidebar side="left" variant="inset" collapsible="icon" className="shadow-lg">
         <SidebarHeader className="border-b border-sidebar-border p-4">
           <div className="flex items-center gap-3">
@@ -74,7 +92,7 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
         <SidebarContent className="p-0">
           <ScrollArea className="h-full">
             <SidebarMenu className="p-2">
-              {navItems.sort((a,b) => { // Keep notifications last
+              {navItems.sort((a,b) => {
                 if (a.label === "My Notifications") return 1;
                 if (b.label === "My Notifications") return -1;
                 return 0;
@@ -100,6 +118,18 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
                   </Link>
                 </SidebarMenuItem>
               ))}
+                <SidebarMenuItem key="logout">
+                   <SidebarMenuButton
+                      onClick={handleLogout}
+                      tooltip="Log Out"
+                      className="justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    >
+                      <div>
+                        <LogOut />
+                        <span>Logout</span>
+                      </div>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
             </SidebarMenu>
           </ScrollArea>
         </SidebarContent>
@@ -117,5 +147,49 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
         </main>
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
+}
+
+
+export default function TrainerAppLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter(); 
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+        if (pathname !== '/trainer/login') {
+          router.push('/trainer/login');
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [router, pathname]);
+
+  const isLoginPage = pathname === '/trainer/login';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        <p className="ml-4 text-lg text-muted-foreground">Verifying session...</p>
+      </div>
+    );
+  }
+
+  if (isLoginPage) {
+    return <main>{children}</main>;
+  }
+
+  if (!user) {
+    return null; // Render nothing while redirecting
+  }
+
+  return <TrainerAppLayoutContent>{children}</TrainerAppLayoutContent>;
 }

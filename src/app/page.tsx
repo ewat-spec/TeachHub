@@ -20,7 +20,7 @@ export default function HomePage() {
         </p>
         
         <div className="flex flex-col items-center gap-4 mt-6 w-full max-w-xs animate-fade-in-up delay-700">
-          <Link href="/trainer/dashboard" passHref className="w-full">
+          <Link href="/trainer" passHref className="w-full">
             <Button size="lg" className="w-full justify-start text-lg py-7 rounded-lg shadow-lg hover:shadow-primary/20 transition-shadow">
               <LogIn className="mr-4 h-5 w-5" /> Trainer Portal
             </Button>
