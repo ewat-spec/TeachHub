@@ -86,7 +86,11 @@ export default function TrainerLoginPage() {
       router.push('/trainer/dashboard');
     } catch (error: any) {
       console.error(error.code, error.message);
-      toast({ title: "Google Sign-In Failed", description: "Could not sign in with Google. Please try another method.", variant: "destructive" });
+      let description = "Could not sign in with Google. Please try another method.";
+      if (error.code === 'auth/unauthorized-domain') {
+        description = "This app's domain is not authorized for sign-in. Please add it to the authorized domains list in your Firebase Authentication settings.";
+      }
+      toast({ title: "Google Sign-In Failed", description, variant: "destructive" });
     } finally {
       setLoading(false);
     }
