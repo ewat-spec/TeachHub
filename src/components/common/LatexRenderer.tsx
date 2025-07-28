@@ -36,7 +36,9 @@ export function LatexRenderer({ latexString, className, textColor }: LatexRender
                     displayMode: part.startsWith('$$') || part.startsWith('\\['),
                  });
             } catch (e) {
-                console.error("KaTeX rendering error for math part:", e);
+                import('@/lib/logger').then(({ logger }) => {
+                  logger.error("KaTeX rendering error for math part", e, { part });
+                });
                 mathElement.textContent = part; 
             }
             containerRef.current?.appendChild(mathElement);
@@ -48,7 +50,9 @@ export function LatexRenderer({ latexString, className, textColor }: LatexRender
         });
 
       } catch (e) {
-        console.error("KaTeX processing error:", e);
+        import('@/lib/logger').then(({ logger }) => {
+          logger.error("KaTeX processing error", e, { latexString });
+        });
         if (containerRef.current) {
             containerRef.current.innerHTML = latexString.replace(/\n/g, '<br />');
         }

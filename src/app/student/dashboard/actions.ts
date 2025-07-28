@@ -6,10 +6,8 @@ import {
   type AskAcademicQuestionInput,
   type AskAcademicQuestionOutput,
 } from '@/ai/flows/ask-academic-question-flow';
-import { 
-  submitStudentQuestion,
-  type StudentQuestionInput,
-} from '@/app/trainer/student-questions/actions';
+import { submitStudentQuestion } from '@/app/trainer/student-questions/actions';
+import type { StudentQuestionInput } from '@/app/trainer/student-questions/data';
 
 export async function getAiAcademicHelp(
   input: AskAcademicQuestionInput
