@@ -69,7 +69,7 @@ export const getAppUrl = (): string => {
     return 'http://localhost:9002';
   }
   
-  return 'https://teachhub.app'; // fallback
+  return 'https://teachhub.com'; // custom domain
 };
 
 // Feature flags based on environment

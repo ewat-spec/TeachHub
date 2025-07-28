@@ -5,9 +5,22 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { PerformanceProvider } from "@/components/providers/PerformanceProvider";
 
 export const metadata: Metadata = {
-  title: 'TeachHub',
-  description: 'Streamlining educational management for trainers and administrators.',
+  title: 'TeachHub - Educational Management Platform',
+  description: 'Streamlining educational management for trainers, students, and administrators. AI-powered lesson planning, performance analytics, and comprehensive academic tools.',
   manifest: '/manifest.json',
+  metadataBase: new URL('https://teachhub.com'),
+  openGraph: {
+    title: 'TeachHub - Educational Management Platform',
+    description: 'Streamlining educational management for trainers, students, and administrators.',
+    url: 'https://teachhub.com',
+    siteName: 'TeachHub',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TeachHub - Educational Management Platform',
+    description: 'Streamlining educational management for trainers, students, and administrators.',
+  },
 };
 
 export default function RootLayout({
