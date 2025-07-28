@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   title: 'TeachHub - Educational Management Platform',
   description: 'Streamlining educational management for trainers, students, and administrators. AI-powered lesson planning, performance analytics, and comprehensive academic tools.',
   manifest: '/manifest.json',
-  metadataBase: new URL('https://teachhub.com'),
+  metadataBase: new URL('https://teachinhub.com'),
   openGraph: {
     title: 'TeachHub - Educational Management Platform',
     description: 'Streamlining educational management for trainers, students, and administrators.',
-    url: 'https://teachhub.com',
+    url: 'https://teachinhub.com',
     siteName: 'TeachHub',
     type: 'website',
   },
