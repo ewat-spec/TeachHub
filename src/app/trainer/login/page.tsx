@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -70,7 +71,7 @@ export default function TrainerLoginPage() {
         router.push('/trainer/dashboard');
       }
     } catch (error: any) {
-      console.error(error.code, error.message);
+      logger.error('Email sign-in failed', error, { email: data.email });
       toast({ title: "Authentication Failed", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -85,7 +86,7 @@ export default function TrainerLoginPage() {
       toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
       router.push('/trainer/dashboard');
     } catch (error: any) {
-      console.error(error.code, error.message);
+      logger.error('Google sign-in failed', error);
       let description = "Could not sign in with Google. Please try another method.";
       if (error.code === 'auth/unauthorized-domain') {
         description = "This app's domain is not authorized for sign-in. Please add it to the authorized domains list in your Firebase Authentication settings.";

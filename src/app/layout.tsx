@@ -1,6 +1,8 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { PerformanceProvider } from "@/components/providers/PerformanceProvider";
 
 export const metadata: Metadata = {
   title: 'TeachHub',
@@ -22,8 +24,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#4A6FA5" />
       </head>
       <body className="font-body antialiased">
-        {children}
-        <Toaster />
+        <PerformanceProvider>
+          <ErrorBoundary>
+            {children}
+            <Toaster />
+          </ErrorBoundary>
+        </PerformanceProvider>
       </body>
     </html>
   );
