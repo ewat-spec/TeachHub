@@ -1,11 +1,26 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { PerformanceProvider } from "@/components/providers/PerformanceProvider";
 
 export const metadata: Metadata = {
-  title: 'TeachHub',
-  description: 'Streamlining educational management for trainers and administrators.',
+  title: 'TeachHub - Educational Management Platform',
+  description: 'Streamlining educational management for trainers, students, and administrators. AI-powered lesson planning, performance analytics, and comprehensive academic tools.',
   manifest: '/manifest.json',
+  metadataBase: new URL('https://teachinhub.com'),
+  openGraph: {
+    title: 'TeachHub - Educational Management Platform',
+    description: 'Streamlining educational management for trainers, students, and administrators.',
+    url: 'https://teachinhub.com',
+    siteName: 'TeachHub',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TeachHub - Educational Management Platform',
+    description: 'Streamlining educational management for trainers, students, and administrators.',
+  },
 };
 
 export default function RootLayout({
@@ -22,8 +37,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#4A6FA5" />
       </head>
       <body className="font-body antialiased">
-        {children}
-        <Toaster />
+        <PerformanceProvider>
+          <ErrorBoundary>
+            {children}
+            <Toaster />
+          </ErrorBoundary>
+        </PerformanceProvider>
       </body>
     </html>
   );
