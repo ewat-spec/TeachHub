@@ -109,7 +109,7 @@ export const getStudentFinancials = (studentId: string = MOCK_STUDENT_ID) => {
   const totalDue = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
   const totalPaid = payments.reduce((sum, pay) => sum + pay.amount, 0);
   // This is a simplified balance. A real system would consider which invoices are paid by which payments.
-  const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.totalAmount - inv.amountPaid), 0);
+  const outstandingBalance = totalDue - totalPaid;
 
   return {
     invoices,

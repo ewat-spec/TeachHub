@@ -1,3 +1,4 @@
+
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
@@ -13,11 +14,14 @@ const customJestConfig = {
     '**/__tests__/**/*.(ts|tsx|js)',
     '**/*.(test|spec).(ts|tsx|js)'
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
+  },
   transformIgnorePatterns: [
-    'node_modules/(?!(lucide-react)/)',
+    'node_modules/(?!lucide-react).+\\.(js|jsx|ts|tsx)$'
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
