@@ -7,13 +7,17 @@ import type { AcademicRecord, CourseRecord, AssessmentResult } from './data';
 import type { Student } from '@/app/trainer/class-lists/data';
 import type { Invoice } from '../finance/data';
 
-// Helper to calculate a simple average, returns null if no valid marks
+// Helper to calculate a weighted average, returns null if no valid marks
 function calculateAverage(items: { mark: number | null, totalMarks: number }[]): number | null {
     const validItems = items.filter(item => typeof item.mark === 'number' && typeof item.totalMarks === 'number' && item.totalMarks > 0);
     if (validItems.length === 0) return null;
-    
-    const totalPercentage = validItems.reduce((sum, item) => sum + (item.mark! / item.totalMarks), 0);
-    return Math.round((totalPercentage / validItems.length) * 100);
+
+    const totalMark = validItems.reduce((sum, item) => sum + item.mark!, 0);
+    const totalMaxMarks = validItems.reduce((sum, item) => sum + item.totalMarks, 0);
+
+    if (totalMaxMarks === 0) return null;
+
+    return Math.round((totalMark / totalMaxMarks) * 100);
 }
 
 
