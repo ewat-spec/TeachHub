@@ -8,9 +8,10 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import * as math from 'mathjs';
 
 const MonteCarloIntegrationInputSchema = z.object({
-  functionBody: z.string().describe('The body of the JavaScript function to integrate, e.g., "x*x", "Math.sin(x)". The function will be evaluated as `new Function(\'x\', \'return \' + functionBody)`.'),
+  functionBody: z.string().describe('The body of the JavaScript function to integrate, e.g., "x*x", "sin(x)". The function will be evaluated safely using mathjs.'),
   xMin: z.number().describe('The lower bound of the integration range (e.g., 0).'),
   xMax: z.number().describe('The upper bound of the integration range (e.g., 1).'),
   simulations: z.number().min(1000).max(1000000).optional().default(100000).describe('The number of simulation points to use. Defaults to 100,000.'),
@@ -40,8 +41,20 @@ export const runMonteCarloIntegration = ai.defineTool(
 
     let fn: (x: number) => number;
     try {
-        // Create a function from the string body. This is safer than direct eval().
-        fn = new Function('x', `return ${functionBody}`) as (x: number) => number;
+        // Compile the expression using mathjs for safe evaluation
+        const compiledNode = math.compile(functionBody);
+
+        // Wrap it in a function that expects 'x'
+        fn = (x: number) => {
+            return compiledNode.evaluate({ x: x });
+        };
+
+        // Test call to ensure it works and returns a number
+        const testVal = fn(xMin);
+        if (typeof testVal !== 'number') {
+            throw new Error("Function did not return a number.");
+        }
+
     } catch (error: any) {
         throw new Error(`Invalid function body provided: "${functionBody}". Error: ${error.message}`);
     }
