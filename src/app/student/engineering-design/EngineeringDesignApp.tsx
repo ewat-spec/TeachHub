@@ -1,15 +1,18 @@
+
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, SimulationResult, DoorAndWindowSchedule, FinishSchedule, GroundedSearchResult, FabricationService } from './types';
+import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, BasicGeometrySpec, SimulationResult, DoorAndWindowSchedule, FinishSchedule, GroundedSearchResult, FabricationService } from './types';
 import {
     createChatSession,
     designSpecSchema,
     architecturalSpecSchema,
     autonomousVehicleSpecSchema,
+    basicGeometrySpecSchema,
     generateDesignSpec,
     generateArchitecturalSpec,
     generateAutonomousVehicleSpec,
+    generateBasicGeometrySpec,
     generateSketchImage,
     generate3dSketchImage,
     generateDesignImage,
@@ -129,7 +132,7 @@ interface Comment {
 interface DesignVersion {
     name: string;
     timestamp: string;
-    spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec;
+    spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec;
 }
 
 
@@ -140,7 +143,7 @@ const EngineeringDesignApp: React.FC = () => {
   const [tolerance, setTolerance] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [designSpec, setDesignSpec] = useState<DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | null>(null);
+  const [designSpec, setDesignSpec] = useState<DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec | null>(null);
   const [filename, setFilename] = useState<string>('');
 
   // Visualization State
@@ -297,15 +300,18 @@ const EngineeringDesignApp: React.FC = () => {
   }, [designSpec, isGeneratingFinishSchedule]);
 
 
-  const reinitializeChatFromSpec = useCallback((spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec, mode: string, thinkingMode: boolean) => {
+  const reinitializeChatFromSpec = useCallback((spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec, mode: string, thinkingMode: boolean) => {
     const isArchitectural = mode === 'architecture';
     const isAutonomous = mode === 'autonomous';
+    const isBasicGeometry = mode === 'basic-geometry';
 
     let systemInstruction = `You are an expert engineering design assistant. The user has provided an initial JSON design specification. Your task is to interpret subsequent user instructions and return the complete, updated JSON object that reflects the requested changes. IMPORTANT: Only output the raw JSON object, with no additional text, explanations, or markdown formatting. The entire response must be a single, valid JSON object.`;
     if (isArchitectural) {
         systemInstruction = `You are an expert architectural design assistant. The user has provided an initial JSON architectural specification. Your task is to interpret subsequent user instructions and return the complete, updated JSON object that reflects the requested changes. IMPORTANT: Only output the raw JSON object, with no additional text, explanations, or markdown formatting. The entire response must be a single, valid JSON object.`;
     } else if (isAutonomous) {
         systemInstruction = `You are an expert autonomous systems design assistant. The user has provided an initial JSON autonomous vehicle specification. Your task is to interpret subsequent user instructions and return the complete, updated JSON object that reflects the requested changes. IMPORTANT: Only output the raw JSON object, with no additional text, explanations, or markdown formatting. The entire response must be a single, valid JSON object.`;
+    } else if (isBasicGeometry) {
+        systemInstruction = `You are a geometry design assistant. The user has provided an initial JSON geometry specification. Your task is to interpret subsequent user instructions and return the complete, updated JSON object. Focus on dimensions, shape types, and colors. IMPORTANT: Only output the raw JSON object.`;
     }
 
     const initialChatHistoryForApi = [
@@ -316,7 +322,7 @@ const EngineeringDesignApp: React.FC = () => {
     const modelConfig: GenerateContentParameters['config'] = {
         systemInstruction,
         responseMimeType: "application/json",
-        responseSchema: isArchitectural ? architecturalSpecSchema : isAutonomous ? autonomousVehicleSpecSchema : designSpecSchema,
+        responseSchema: isArchitectural ? architecturalSpecSchema : isAutonomous ? autonomousVehicleSpecSchema : isBasicGeometry ? basicGeometrySpecSchema : designSpecSchema,
     };
 
     if (thinkingMode) {
@@ -514,8 +520,8 @@ const EngineeringDesignApp: React.FC = () => {
 
   // Effect to set default simulation material
   useEffect(() => {
-    if (designSpec && 'materials' in designSpec && designSpec.materials.length > 0 && !simulationMaterial) {
-        setSimulationMaterial(designSpec.materials[0]);
+    if (designSpec && 'materials' in designSpec && (designSpec as DesignSpec).materials.length > 0 && !simulationMaterial) {
+        setSimulationMaterial((designSpec as DesignSpec).materials[0]);
     }
   }, [designSpec, simulationMaterial]);
 
@@ -821,8 +827,8 @@ const EngineeringDesignApp: React.FC = () => {
     setActiveView('sketch');
 
     try {
-      let spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec;
-      let sketchPromise: Promise<string>;
+      let spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec;
+      let sketchPromise: Promise<string> | null = null;
       let conceptPromise: Promise<string> | null = null;
       let renderPromise: Promise<string> | null = null;
 
@@ -839,6 +845,11 @@ const EngineeringDesignApp: React.FC = () => {
       } else if (designMode === 'autonomous') {
         spec = await generateAutonomousVehicleSpec(prompt, referenceImages);
         sketchPromise = generateVehicleConceptImage(spec as AutonomousVehicleSpec);
+      } else if (designMode === 'basic-geometry') {
+        spec = await generateBasicGeometrySpec(prompt);
+        // For basic geometry, we go straight to the model view
+        setGltfData(JSON.stringify(spec));
+        setActiveView('3d-model');
       } else {
         throw new Error("Invalid design mode selected");
       }
@@ -848,8 +859,10 @@ const EngineeringDesignApp: React.FC = () => {
       saveVersion('Initial Version');
       reinitializeChatFromSpec(spec, designMode, isThinkingMode);
 
-      const sketchUrl = await sketchPromise;
-      setSketchImageUrl(sketchUrl);
+      if (sketchPromise) {
+        const sketchUrl = await sketchPromise;
+        setSketchImageUrl(sketchUrl);
+      }
 
       if (conceptPromise) {
           const conceptUrl = await conceptPromise;
@@ -885,24 +898,30 @@ const EngineeringDesignApp: React.FC = () => {
             setDesignSpec(updatedSpec);
             setChatHistory(prev => [...prev, { role: 'model', text: `Design updated. View the changes in the Spec tab.` }]);
             saveVersion(`Chat Edit: ${currentInput.substring(0, 30)}...`);
-            setSketchImageUrl(null);
-            setThreeDSketchImageUrl(null);
-            setImageUrl(null);
-            setRenderImageUrl(null);
-            setLifestyleImageUrl(null);
-            setExplodedImageUrl(null);
-            setTechnicalDrawingImageUrl(null);
-            setAnalysisResult(null);
-            setGltfData(null);
-            setAssemblyInstructions(null);
-            setVirtualTourUrl(null);
-            setElevationImageUrl(null);
-            setSectionImageUrl(null);
-            setSensorLayoutImageUrl(null);
-            setSystemArchitectureImageUrl(null);
-            setSchedule(null);
-            setFinishSchedule(null);
-            setActiveView('sketch');
+
+            // For basic geometry, immediately update the "model" (spec)
+            if (designMode === 'basic-geometry') {
+                setGltfData(JSON.stringify(updatedSpec));
+            } else {
+                setSketchImageUrl(null);
+                setThreeDSketchImageUrl(null);
+                setImageUrl(null);
+                setRenderImageUrl(null);
+                setLifestyleImageUrl(null);
+                setExplodedImageUrl(null);
+                setTechnicalDrawingImageUrl(null);
+                setAnalysisResult(null);
+                setGltfData(null);
+                setAssemblyInstructions(null);
+                setVirtualTourUrl(null);
+                setElevationImageUrl(null);
+                setSectionImageUrl(null);
+                setSensorLayoutImageUrl(null);
+                setSystemArchitectureImageUrl(null);
+                setSchedule(null);
+                setFinishSchedule(null);
+                setActiveView('sketch');
+            }
 
         } catch (e) {
             reportSuspiciousActivity('ChatNonJsonReply', { response: responseText });
@@ -915,7 +934,7 @@ const EngineeringDesignApp: React.FC = () => {
     } finally {
         setIsChatLoading(false);
     }
-  }, [chatInput, chatSession, isChatLoading]);
+  }, [chatInput, chatSession, isChatLoading, designMode]);
 
     const handleConfirmShare = async () => {
         const stateToShare = {
@@ -1073,6 +1092,16 @@ const EngineeringDesignApp: React.FC = () => {
         }
     }, [designSpec, isGeneratingVirtualTour]);
 
+    const handleGenerateOrthographic = useCallback(() => {
+        // Placeholder for future implementation
+        console.log("Generating orthographic views...");
+    }, []);
+
+    const handleGenerateIsometric = useCallback(() => {
+        // Placeholder for future implementation
+        console.log("Generating isometric view...");
+    }, []);
+
     if (isInitialLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-slate-900 text-slate-300">
@@ -1128,6 +1157,8 @@ const EngineeringDesignApp: React.FC = () => {
                     generateVirtualTour: handleGenerateVirtualTour,
                     generateSensorLayout: handleGenerateSensorLayout,
                     generateSystemArchitecture: handleGenerateSystemArchitecture,
+                    generateOrthographic: handleGenerateOrthographic,
+                    generateIsometric: handleGenerateIsometric,
                 }}
                 loadingStatus={{
                     isGenerating3dSketch,
@@ -1182,6 +1213,7 @@ const EngineeringDesignApp: React.FC = () => {
                 gltfData={gltfData}
                 virtualTourUrl={virtualTourUrl}
                 simulationResult={simulationResult}
+                basicGeometrySpec={designMode === 'basic-geometry' && designSpec ? designSpec : undefined}
                 drawingTools={{
                     drawingTool,
                     setDrawingTool,

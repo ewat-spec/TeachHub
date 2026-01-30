@@ -30,6 +30,7 @@ interface VisualizerPanelProps {
     gltfData: string | null;
     virtualTourUrl: string | null;
     simulationResult: any;
+    basicGeometrySpec?: any;
     // Drawing Refinement Props
     drawingTools: {
         drawingTool: 'pen' | 'eraser' | null;
@@ -69,7 +70,7 @@ const ImageViewer = ({ src, alt }: { src: string | null, alt: string }) => (
 
 export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
     designMode, designSpec, isLoading, activeView, setActiveView,
-    images, gltfData, virtualTourUrl, simulationResult,
+    images, gltfData, virtualTourUrl, simulationResult, basicGeometrySpec,
     drawingTools
 }) => {
 
@@ -220,7 +221,7 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
                         )}
                     </div>
                 )}
-                {activeView === '3d-model' && gltfData && <ModelViewer gltfJson={gltfData} simulationVerdict={simulationResult?.verdict} />}
+                {activeView === '3d-model' && gltfData && <ModelViewer gltfJson={gltfData} simulationVerdict={simulationResult?.verdict} designMode={designMode} basicGeometrySpec={basicGeometrySpec} />}
             </div>
         </div>
     );

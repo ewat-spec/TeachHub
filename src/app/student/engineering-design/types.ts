@@ -15,6 +15,14 @@ export interface AutonomousVehicleSpec {
   [key: string]: any;
 }
 
+export interface BasicGeometrySpec {
+  name: string;
+  shape: 'cube' | 'sphere' | 'cylinder';
+  dimensions: { width: number; height: number; depth: number };
+  color: string;
+  [key: string]: any;
+}
+
 export interface SimulationResult {
   verdict: string;
   [key: string]: any;

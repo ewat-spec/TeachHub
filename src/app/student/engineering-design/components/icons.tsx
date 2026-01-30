@@ -4,7 +4,7 @@ import {
     Eraser, Image as ImageIconLucide, Factory, FileJson, Wrench, FileText, Sparkles,
     Home, Building, Armchair, DollarSign, Maximize,
     Package, Car, Plane, Gem, Search, BrainCircuit, Film,
-    History, MessageSquare, FileCode, Table, Palette
+    History, MessageSquare, FileCode, Table, Palette, BoxSelect
 } from 'lucide-react';
 
 export const MagicWandIcon = Wand;
@@ -46,3 +46,4 @@ export const MessageSquareIcon = MessageSquare;
 export const FileCodeIcon = FileCode;
 export const TableIcon = Table;
 export const PaletteIcon = Palette;
+export const ShapesIcon = BoxSelect;

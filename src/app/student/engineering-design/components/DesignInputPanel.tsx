@@ -1,11 +1,11 @@
 "use client";
 
 import React from 'react';
-import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec } from '../types';
+import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, BasicGeometrySpec } from '../types';
 import {
     MagicWandIcon, LoaderIcon, CubeIcon, SparklesIcon, ExplodedViewIcon, RulerIcon,
     FileJsonIcon, BuildingIcon, LayersIcon, TableIcon, PaletteIcon, FilmIcon,
-    Share2Icon, CpuIcon, FileCodeIcon, MessageSquareIcon, HistoryIcon
+    Share2Icon, CpuIcon, ShapesIcon
 } from './icons';
 
 interface ActionButtonProps {
@@ -33,7 +33,7 @@ interface DesignInputPanelProps {
     setPrompt: (prompt: string) => void;
     isLoading: boolean;
     error: string | null;
-    designSpec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | null;
+    designSpec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec | null;
     designMode: string;
     handleSubmit: () => void;
     // Handlers for generation actions
@@ -50,6 +50,9 @@ interface DesignInputPanelProps {
         generateVirtualTour: () => void;
         generateSensorLayout: () => void;
         generateSystemArchitecture: () => void;
+        // Basic Geometry Actions
+        generateOrthographic: () => void;
+        generateIsometric: () => void;
     };
     // Status flags
     loadingStatus: {
@@ -65,6 +68,8 @@ interface DesignInputPanelProps {
         isGeneratingVirtualTour: boolean;
         isGeneratingSensorLayout: boolean;
         isGeneratingSystemArchitecture: boolean;
+        isGeneratingOrthographic?: boolean;
+        isGeneratingIsometric?: boolean;
     };
     // Data availability flags (to disable buttons)
     hasData: {
@@ -80,6 +85,8 @@ interface DesignInputPanelProps {
         virtualTour: boolean;
         sensorLayout: boolean;
         systemArchitecture: boolean;
+        orthographic?: boolean;
+        isometric?: boolean;
     };
 }
 
@@ -94,7 +101,7 @@ export const DesignInputPanel: React.FC<DesignInputPanelProps> = ({
             <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
                 <textarea
                     className="w-full h-40 bg-slate-900 border border-slate-700 rounded-md p-2 text-sm placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
-                    placeholder="Describe your design..."
+                    placeholder={designMode === 'basic-geometry' ? "Describe shape (e.g., 'Red cube 20x20x20')" : "Describe your design..."}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                 />
@@ -135,6 +142,12 @@ export const DesignInputPanel: React.FC<DesignInputPanelProps> = ({
                                 <>
                                      <ActionButton icon={Share2Icon} label="Generate Sensor Layout" onClick={actions.generateSensorLayout} isLoading={loadingStatus.isGeneratingSensorLayout} disabled={hasData.sensorLayout} />
                                      <ActionButton icon={CpuIcon} label="Generate System Architecture" onClick={actions.generateSystemArchitecture} isLoading={loadingStatus.isGeneratingSystemArchitecture} disabled={hasData.systemArchitecture} />
+                                </>
+                            )}
+                            {designMode === 'basic-geometry' && (
+                                <>
+                                    <ActionButton icon={ShapesIcon} label="Generate Orthographic Views" onClick={actions.generateOrthographic} isLoading={!!loadingStatus.isGeneratingOrthographic} disabled={hasData.orthographic} />
+                                    <ActionButton icon={CubeIcon} label="Generate Isometric View" onClick={actions.generateIsometric} isLoading={!!loadingStatus.isGeneratingIsometric} disabled={hasData.isometric} />
                                 </>
                             )}
                         </div>

@@ -1,4 +1,4 @@
-import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, DoorAndWindowSchedule, FinishSchedule, SimulationResult, FabricationService, GroundedSearchResult } from '../types';
+import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, BasicGeometrySpec, DoorAndWindowSchedule, FinishSchedule, SimulationResult, FabricationService, GroundedSearchResult } from '../types';
 
 export interface GenerateContentParameters {
     config?: {
@@ -22,6 +22,7 @@ export const createChatSession = (params: any): Chat => {
 export const designSpecSchema = {};
 export const architecturalSpecSchema = {};
 export const autonomousVehicleSpecSchema = {};
+export const basicGeometrySpecSchema = {};
 
 export const generateDesignSpec = async (prompt: string, images: any[], tolerance: string): Promise<DesignSpec> => {
     return { name: "Generated Product Design", materials: ["Plastic", "Metal"] };
@@ -31,6 +32,9 @@ export const generateArchitecturalSpec = async (prompt: string, images: any[]): 
 };
 export const generateAutonomousVehicleSpec = async (prompt: string, images: any[]): Promise<AutonomousVehicleSpec> => {
     return { name: "Generated Autonomous Vehicle" };
+};
+export const generateBasicGeometrySpec = async (prompt: string): Promise<BasicGeometrySpec> => {
+    return { name: "Simple Cube", shape: 'cube', dimensions: { width: 10, height: 10, depth: 10 }, color: '#3b82f6' };
 };
 
 const placeholderImage = "https://placehold.co/600x400?text=Generated+Image";
@@ -70,4 +74,5 @@ export const generatePdfSummaryHtmlBody = async (spec: any, images: any) => "<di
 export const generateVirtualTourVideo = async (spec: any) => "https://www.w3schools.com/html/mov_bbb.mp4"; // Placeholder video
 export const generateFusion360Script = async (spec: any) => "print('Hello Fusion 360')";
 export const cleanJson = (text: string) => text;
+
 export type { FabricationService };
