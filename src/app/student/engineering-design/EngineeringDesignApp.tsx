@@ -263,7 +263,7 @@ const EngineeringDesignApp: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [designHistory, setDesignHistory] = useState<DesignVersion[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'spec' | 'chat' | 'history' | 'comments'>('spec');
+  const [activeTab, setActiveTab] = useState<'spec' | 'chat' | 'history' | 'comments' | 'personalize'>('spec');
 
   const handleGenerateSchedule = useCallback(async () => {
     if (!designSpec || !('buildingType' in designSpec) || isGeneratingSchedule) return;
@@ -881,23 +881,23 @@ const EngineeringDesignApp: React.FC = () => {
     }
   }, [prompt, designMode, referenceImages, tolerance, reinitializeChatFromSpec, isThinkingMode, selectedTexture, aspectRatio]);
 
-  const handleChatSubmit = useCallback(async () => {
-    if (!chatInput.trim() || !chatSession || isChatLoading) return;
+  const handleChatSubmit = useCallback(async (customMessage?: string) => {
+    const messageToSend = customMessage || chatInput;
+    if (!messageToSend.trim() || !chatSession || isChatLoading) return;
 
-    const currentInput = chatInput;
-    setChatInput('');
+    if (!customMessage) setChatInput('');
     setIsChatLoading(true);
-    setChatHistory(prev => [...prev, { role: 'user', text: currentInput }]);
+    setChatHistory(prev => [...prev, { role: 'user', text: messageToSend }]);
 
     try {
-        const response = await chatSession.sendMessage({ message: currentInput });
+        const response = await chatSession.sendMessage({ message: messageToSend });
         const responseText = response.text;
 
         try {
             const updatedSpec = JSON.parse(cleanJson(responseText));
             setDesignSpec(updatedSpec);
             setChatHistory(prev => [...prev, { role: 'model', text: `Design updated. View the changes in the Spec tab.` }]);
-            saveVersion(`Chat Edit: ${currentInput.substring(0, 30)}...`);
+            saveVersion(`Edit: ${messageToSend.substring(0, 30)}...`);
 
             // For basic geometry, immediately update the "model" (spec)
             if (designMode === 'basic-geometry') {
@@ -935,6 +935,29 @@ const EngineeringDesignApp: React.FC = () => {
         setIsChatLoading(false);
     }
   }, [chatInput, chatSession, isChatLoading, designMode]);
+
+  const handleApplyPersonalization = (style: string, material: string, color: string) => {
+      const parts = [];
+      if (style) parts.push(`style aesthetic of "${style}"`);
+      if (material) parts.push(`primary material of "${material}"`);
+      if (color) parts.push(`color theme of "${color}"`);
+
+      if (parts.length === 0) return;
+
+      const instruction = `Update the design to have a ${parts.join(', ')}.`;
+      handleChatSubmit(instruction);
+  };
+
+  const handleAiInsight = (type: string) => {
+      let instruction = "";
+      switch(type) {
+          case 'materials': instruction = "Suggest optimizations for materials to improve durability and cost-efficiency."; break;
+          case 'ergonomics': instruction = "Analyze the design for ergonomics and suggest usability improvements."; break;
+          case 'sustainability': instruction = "Evaluate the environmental impact and suggest more sustainable alternatives."; break;
+          case 'cost': instruction = "Suggest modifications to reduce manufacturing costs without compromising quality."; break;
+      }
+      if (instruction) handleChatSubmit(instruction);
+  };
 
     const handleConfirmShare = async () => {
         const stateToShare = {
@@ -1240,13 +1263,15 @@ const EngineeringDesignApp: React.FC = () => {
                 chatInput={chatInput}
                 setChatInput={setChatInput}
                 isChatLoading={isChatLoading}
-                handleChatSubmit={handleChatSubmit}
+                handleChatSubmit={() => handleChatSubmit()}
                 designHistory={designHistory}
                 loadVersion={loadVersion}
                 comments={comments}
                 newComment={newComment}
                 setNewComment={setNewComment}
                 handleAddComment={handleAddComment}
+                handleApplyPersonalization={handleApplyPersonalization}
+                handleAiInsight={handleAiInsight}
             />
         </main>
 

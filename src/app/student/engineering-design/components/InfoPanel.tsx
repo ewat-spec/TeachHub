@@ -1,9 +1,11 @@
 "use client";
+
 import React, { useRef, useEffect } from 'react';
 import {
-    FileCodeIcon, MessageSquareIcon, HistoryIcon, SendIcon, LoaderIcon
+    FileCodeIcon, MessageSquareIcon, HistoryIcon, SendIcon, LoaderIcon, SlidersIcon
 } from './icons';
-import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec } from '../types';
+import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, BasicGeometrySpec } from '../types';
+import { PersonalizationPanel } from './PersonalizationPanel';
 
 interface Comment {
     text: string;
@@ -13,12 +15,12 @@ interface Comment {
 interface DesignVersion {
     name: string;
     timestamp: string;
-    spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec;
+    spec: DesignSpec | ArchitecturalSpec | AutonomousVehicleSpec | BasicGeometrySpec;
 }
 
 interface InfoPanelProps {
-    activeTab: 'spec' | 'chat' | 'history' | 'comments';
-    setActiveTab: (tab: 'spec' | 'chat' | 'history' | 'comments') => void;
+    activeTab: 'spec' | 'chat' | 'history' | 'comments' | 'personalize';
+    setActiveTab: (tab: 'spec' | 'chat' | 'history' | 'comments' | 'personalize') => void;
     designSpec: any;
     // Chat Props
     chatHistory: { role: 'user' | 'model', text: string }[];
@@ -34,15 +36,19 @@ interface InfoPanelProps {
     newComment: string;
     setNewComment: (val: string) => void;
     handleAddComment: () => void;
+    // Personalization Props
+    handleApplyPersonalization: (style: string, material: string, color: string) => void;
+    handleAiInsight: (type: string) => void;
 }
 
-const RightPanelTabButton = ({ tabId, icon: Icon, label, activeTab, setActiveTab }: { tabId: 'spec' | 'chat' | 'history' | 'comments', icon: React.ElementType, label: string, activeTab: string, setActiveTab: (t: any) => void }) => (
+const RightPanelTabButton = ({ tabId, icon: Icon, label, activeTab, setActiveTab }: { tabId: 'spec' | 'chat' | 'history' | 'comments' | 'personalize', icon: React.ElementType, label: string, activeTab: string, setActiveTab: (t: any) => void }) => (
     <button
         onClick={() => setActiveTab(tabId)}
         className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium transition-colors ${activeTab === tabId ? 'bg-slate-800/50 text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
+        title={label}
     >
         <Icon className="w-5 h-5" />
-        <span>{label}</span>
+        <span className="hidden xl:inline">{label}</span>
     </button>
 );
 
@@ -50,7 +56,8 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
     activeTab, setActiveTab, designSpec,
     chatHistory, chatInput, setChatInput, isChatLoading, handleChatSubmit,
     designHistory, loadVersion,
-    comments, newComment, setNewComment, handleAddComment
+    comments, newComment, setNewComment, handleAddComment,
+    handleApplyPersonalization, handleAiInsight
 }) => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -63,11 +70,12 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
 
     return (
         <div className="lg:col-span-3 bg-slate-800/50 border border-slate-800 rounded-lg flex flex-col overflow-hidden">
-            <div className="flex border-b border-slate-800 shrink-0">
+            <div className="flex border-b border-slate-800 shrink-0 overflow-x-auto">
                 <RightPanelTabButton tabId="spec" icon={FileCodeIcon} label="Spec" activeTab={activeTab} setActiveTab={setActiveTab} />
                 <RightPanelTabButton tabId="chat" icon={MessageSquareIcon} label="Chat" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <RightPanelTabButton tabId="personalize" icon={SlidersIcon} label="Tools" activeTab={activeTab} setActiveTab={setActiveTab} />
                 <RightPanelTabButton tabId="history" icon={HistoryIcon} label="History" activeTab={activeTab} setActiveTab={setActiveTab} />
-                <RightPanelTabButton tabId="comments" icon={MessageSquareIcon} label="Comments" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <RightPanelTabButton tabId="comments" icon={MessageSquareIcon} label="Discuss" activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
             <div className="flex-grow overflow-y-auto custom-scrollbar">
               {activeTab === 'spec' && (
@@ -100,6 +108,13 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({
                         </div>
                    </div>
                 </div>
+              )}
+              {activeTab === 'personalize' && (
+                  <PersonalizationPanel
+                    onApply={handleApplyPersonalization}
+                    onAiInsight={handleAiInsight}
+                    isProcessing={isChatLoading}
+                  />
               )}
               {activeTab === 'history' && (
                 <div className="p-4 space-y-2">

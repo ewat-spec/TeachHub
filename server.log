@@ -19,3 +19,5 @@ Firebase config missing or dummy. Running in mock mode.
  GET /student/engineering-design 200 in 128ms
 Firebase config missing or dummy. Running in mock mode.
  GET /student/engineering-design 200 in 698ms
+Firebase config missing or dummy. Running in mock mode.
+ GET /student/engineering-design 200 in 2817ms
