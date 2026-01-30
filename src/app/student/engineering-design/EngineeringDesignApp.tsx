@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, SimulationResult, DoorAndWindowSchedule, FinishSchedule, GroundedSearchResult } from './types';
+import { DesignSpec, ArchitecturalSpec, AutonomousVehicleSpec, SimulationResult, DoorAndWindowSchedule, FinishSchedule, GroundedSearchResult, FabricationService } from './types';
 import {
     createChatSession,
     designSpecSchema,
@@ -10,7 +10,6 @@ import {
     generateDesignSpec,
     generateArchitecturalSpec,
     generateAutonomousVehicleSpec,
-    analyzeImageWithFlash,
     generateSketchImage,
     generate3dSketchImage,
     generateDesignImage,
@@ -29,35 +28,22 @@ import {
     generateSensorLayoutImage,
     generateSystemArchitectureImage,
     refineTechnicalDrawingImage,
-    editImageWithText,
-    generateManufacturingAndCostAnalysis,
-    generateConstructionCostAnalysis,
     generateCadModel,
-    generatePartAnalysis,
-    generateSimulationAnalysis,
-    findFabricationServices,
-    FabricationService,
-    generateAssemblyInstructions,
-    getSourcingAndComplianceInfo,
-    getComponentSourcingInfo,
-    generatePdfSummaryHtmlBody,
     generateVirtualTourVideo,
-    generateFusion360Script,
     cleanJson,
     Chat,
     GenerateContentParameters
 } from './services/geminiService';
 import {
-    MagicWandIcon, LoaderIcon, AlertTriangleIcon, LayersIcon, DownloadIcon, RulerIcon, CameraIcon,
-    CogIcon, Share2Icon, SendIcon, CubeIcon, FileUpIcon, CpuIcon, ShieldCheckIcon, PencilIcon,
-    EraserIcon, ImageIcon, FactoryIcon, FileJsonIcon, WrenchIcon, FileTextIcon, SparklesIcon,
-    HomeIcon, BuildingIcon, SofaIcon, DollarSignIcon, ExplodedViewIcon,
-    ProductIcon, AutomotiveIcon, AerospaceIcon, JewelryIcon, SearchIcon, BrainCircuitIcon, FilmIcon,
-    HistoryIcon, MessageSquareIcon, FileCodeIcon, TableIcon, PaletteIcon
+    MagicWandIcon, LoaderIcon, AlertTriangleIcon, Share2Icon
 } from './components/icons';
-import ModelViewer from './components/ModelViewer';
-import { gltfToStl } from './components/stlExporter';
-import { initializeSecurityAgent, createSanitizedHtmlObject, reportSuspiciousActivity } from './services/securityService';
+import { initializeSecurityAgent, reportSuspiciousActivity } from './services/securityService';
+
+// Refactored Components
+import { ModeSelector } from './components/ModeSelector';
+import { DesignInputPanel } from './components/DesignInputPanel';
+import { VisualizerPanel } from './components/VisualizerPanel';
+import { InfoPanel } from './components/InfoPanel';
 
 
 // --- Helper functions for sharing ---
@@ -544,32 +530,106 @@ const EngineeringDesignApp: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Canvas setup for drawing
-  useEffect(() => {
-    const canvas = drawingCanvasRef.current;
-    const image = imageRef.current;
-    if (canvas && image && activeView === 'technical-drawing' && technicalDrawingImageUrl) {
-      const resizeCanvas = () => {
-        if(image.naturalWidth > 0) { // check if image is loaded
-          const { width, height } = image.getBoundingClientRect();
-          canvas.width = width;
-          canvas.height = height;
+  const getCoords = (e: React.MouseEvent | React.TouchEvent) => {
+        const canvas = drawingCanvasRef.current;
+        if (!canvas) return { x: 0, y: 0 };
+        const rect = canvas.getBoundingClientRect();
+        if ('touches' in e.nativeEvent) {
+            return {
+            x: e.nativeEvent.touches[0].clientX - rect.left,
+            y: e.nativeEvent.touches[0].clientY - rect.top,
+            };
         }
-      };
+        return {
+            x: e.nativeEvent.offsetX,
+            y: e.nativeEvent.offsetY,
+        };
+    };
 
-      if (image.complete) {
-        resizeCanvas();
-      } else {
-        image.onload = resizeCanvas;
-      }
-      window.addEventListener('resize', resizeCanvas);
+    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!drawingTool) return;
+        const canvas = drawingCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      return () => {
-        window.removeEventListener('resize', resizeCanvas);
-        image.onload = null;
-      }
-    }
-  }, [technicalDrawingImageUrl, activeView]);
+        setIsDrawing(true);
+        setHasDrawing(true);
+
+        const { x, y } = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.strokeStyle = drawingTool === 'pen' ? '#ef4444' : '#ffffff'; // red for pen
+        ctx.lineWidth = drawingTool === 'pen' ? 3 : 20;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        if (drawingTool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    };
+
+    const draw = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isDrawing || !drawingTool) return;
+        const canvas = drawingCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        e.preventDefault();
+        const { x, y } = getCoords(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    };
+
+    const stopDrawing = () => {
+        setIsDrawing(false);
+    };
+
+    const handleRefineDrawing = useCallback(async () => {
+        if (!refineInstruction.trim() || !technicalDrawingImageUrl || !designSpec || isRefiningDrawing || designMode !== 'product') return;
+
+        setError(null);
+        setIsRefiningDrawing(true);
+
+        try {
+            let imageToSend = technicalDrawingImageUrl;
+
+            if (hasDrawing && drawingCanvasRef.current && imageRef.current) {
+                const baseImage = imageRef.current;
+                const overlayCanvas = drawingCanvasRef.current;
+
+                const compositeCanvas = document.createElement('canvas');
+                compositeCanvas.width = baseImage.naturalWidth;
+                compositeCanvas.height = baseImage.naturalHeight;
+                const ctx = compositeCanvas.getContext('2d');
+
+                if (ctx) {
+                    ctx.drawImage(baseImage, 0, 0);
+                    ctx.drawImage(overlayCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
+                    imageToSend = compositeCanvas.toDataURL('image/png');
+                }
+            }
+
+            const refinedUrl = await refineTechnicalDrawingImage(refineInstruction, imageToSend, designSpec as DesignSpec);
+            setTechnicalDrawingImageUrl(refinedUrl);
+
+            setRefineInstruction('');
+            setHasDrawing(false);
+            const canvas = drawingCanvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx?.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+        } catch (e: any) {
+            reportSuspiciousActivity('DrawingRefinementFailed', { error: e });
+            setError(e.message || 'An error occurred while refining the drawing.');
+        } finally {
+            setIsRefiningDrawing(false);
+        }
+    }, [refineInstruction, technicalDrawingImageUrl, designSpec, isRefiningDrawing, hasDrawing, designMode]);
 
 
   const handleOpenCamera = useCallback(() => {
@@ -1013,112 +1073,6 @@ const EngineeringDesignApp: React.FC = () => {
         }
     }, [designSpec, isGeneratingVirtualTour]);
 
-    const getCoords = (e: React.MouseEvent | React.TouchEvent) => {
-        const canvas = drawingCanvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
-        const rect = canvas.getBoundingClientRect();
-        if ('touches' in e.nativeEvent) {
-            return {
-            x: e.nativeEvent.touches[0].clientX - rect.left,
-            y: e.nativeEvent.touches[0].clientY - rect.top,
-            };
-        }
-        return {
-            x: e.nativeEvent.offsetX,
-            y: e.nativeEvent.offsetY,
-        };
-    };
-
-    const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!drawingTool) return;
-        const canvas = drawingCanvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        setIsDrawing(true);
-        setHasDrawing(true);
-
-        const { x, y } = getCoords(e);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.strokeStyle = drawingTool === 'pen' ? '#ef4444' : '#ffffff'; // red for pen
-        ctx.lineWidth = drawingTool === 'pen' ? 3 : 20;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        if (drawingTool === 'eraser') {
-            ctx.globalCompositeOperation = 'destination-out';
-        } else {
-            ctx.globalCompositeOperation = 'source-over';
-        }
-    };
-
-    const draw = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!isDrawing || !drawingTool) return;
-        const canvas = drawingCanvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        e.preventDefault();
-        const { x, y } = getCoords(e);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-    };
-
-    const stopDrawing = () => {
-        setIsDrawing(false);
-    };
-
-    const handleRefineDrawing = useCallback(async () => {
-        if (!refineInstruction.trim() || !technicalDrawingImageUrl || !designSpec || isRefiningDrawing || designMode !== 'product') return;
-
-        setError(null);
-        setIsRefiningDrawing(true);
-
-        try {
-            let imageToSend = technicalDrawingImageUrl;
-
-            if (hasDrawing && drawingCanvasRef.current && imageRef.current) {
-                const baseImage = imageRef.current;
-                const overlayCanvas = drawingCanvasRef.current;
-
-                const compositeCanvas = document.createElement('canvas');
-                compositeCanvas.width = baseImage.naturalWidth;
-                compositeCanvas.height = baseImage.naturalHeight;
-                const ctx = compositeCanvas.getContext('2d');
-
-                if (ctx) {
-                    ctx.drawImage(baseImage, 0, 0);
-                    ctx.drawImage(overlayCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height, 0, 0, compositeCanvas.width, compositeCanvas.height);
-                    imageToSend = compositeCanvas.toDataURL('image/png');
-                }
-            }
-
-            const refinedUrl = await refineTechnicalDrawingImage(refineInstruction, imageToSend, designSpec as DesignSpec);
-            setTechnicalDrawingImageUrl(refinedUrl);
-
-            setRefineInstruction('');
-            setHasDrawing(false);
-            const canvas = drawingCanvasRef.current;
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                ctx?.clearRect(0, 0, canvas.width, canvas.height);
-            }
-
-        } catch (e: any) {
-            reportSuspiciousActivity('DrawingRefinementFailed', { error: e });
-            setError(e.message || 'An error occurred while refining the drawing.');
-        } finally {
-            setIsRefiningDrawing(false);
-        }
-    }, [refineInstruction, technicalDrawingImageUrl, designSpec, isRefiningDrawing, hasDrawing, designMode]);
-
-
-    const ImageViewer = ({ src, alt }: { src: string | null, alt: string }) => (
-        src ? <img src={src} alt={alt} className="max-w-full max-h-full object-contain" /> : <p className="text-slate-400">{alt} not available.</p>
-    );
-
     if (isInitialLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-slate-900 text-slate-300">
@@ -1129,73 +1083,8 @@ const EngineeringDesignApp: React.FC = () => {
     }
 
     if (!designMode) {
-        const modes = [
-            { id: 'product', name: 'Product & Industrial Design', icon: ProductIcon, description: 'Generate specs, concepts, and 3D models for physical products.' },
-            { id: 'architecture', name: 'Architecture', icon: HomeIcon, description: 'Create architectural plans, renderings, and schedules for buildings.' },
-            { id: 'autonomous', name: 'Autonomous Systems', icon: AutomotiveIcon, description: 'Design autonomous vehicles, drones, and robots with sensor layouts.' },
-        ];
-        return (
-            <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-                <div className="text-center mb-10">
-                    <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">AI Engineering Design Assistant</h1>
-                    <p className="text-slate-400 text-lg">Your intelligent partner for creating, analyzing, and visualizing complex designs.</p>
-                </div>
-                <div className="w-full max-w-4xl">
-                    <h2 className="text-2xl font-semibold text-slate-200 mb-6 text-center">Select a Design Mode to Begin</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {modes.map((mode) => (
-                            <button
-                                key={mode.id}
-                                onClick={() => setDesignMode(mode.id)}
-                                className="bg-slate-800 p-6 rounded-lg border border-slate-700 hover:border-sky-500 hover:bg-slate-700/50 transition-all duration-300 text-left flex flex-col items-start"
-                            >
-                                <mode.icon className="w-10 h-10 mb-4 text-sky-400" />
-                                <h3 className="text-xl font-bold text-slate-100 mb-2">{mode.name}</h3>
-                                <p className="text-slate-400 text-sm flex-grow">{mode.description}</p>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
+        return <ModeSelector setDesignMode={setDesignMode} />;
     }
-
-    const ActionButton = ({ icon: Icon, label, onClick, isLoading, disabled = false }: { icon: React.ElementType, label: string, onClick: () => void, isLoading: boolean, disabled?: boolean }) => (
-        <button
-            onClick={onClick}
-            disabled={isLoading || disabled}
-            className="w-full flex items-center gap-3 text-left px-3 py-2 text-sm bg-slate-900 hover:bg-slate-700 disabled:bg-slate-900/50 disabled:text-slate-500 disabled:cursor-not-allowed rounded-md transition-colors border border-slate-700"
-        >
-            {isLoading ? <LoaderIcon className="w-4 h-4 animate-spin shrink-0" /> : <Icon className="w-4 h-4 shrink-0" />}
-            <span className="flex-grow">{label}</span>
-            {disabled && !isLoading && <span className="text-xs text-slate-500">Generated</span>}
-        </button>
-    );
-
-    const TabButton = ({ viewId, icon: Icon, label }: { viewId: string; icon: React.ElementType; label: string; }) => (
-        <button
-            onClick={() => setActiveView(viewId)}
-            aria-label={label}
-            className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors shrink-0 ${
-                activeView === viewId
-                ? 'bg-sky-600 text-white'
-                : 'bg-slate-800 hover:bg-slate-700'
-            }`}
-        >
-            <Icon className="w-4 h-4" />
-            <span>{label}</span>
-        </button>
-    );
-
-    const RightPanelTabButton = ({ tabId, icon: Icon, label }: { tabId: 'spec' | 'chat' | 'history' | 'comments', icon: React.ElementType, label: string }) => (
-        <button
-            onClick={() => setActiveTab(tabId)}
-            className={`flex-1 flex items-center justify-center gap-2 p-3 text-sm font-medium transition-colors ${activeTab === tabId ? 'bg-slate-800/50 text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}
-        >
-            <Icon className="w-5 h-5" />
-            <span>{label}</span>
-        </button>
-    );
 
     return (
       <div className="flex flex-col h-screen bg-slate-900 text-slate-300 font-sans">
@@ -1218,257 +1107,115 @@ const EngineeringDesignApp: React.FC = () => {
         {/* Main Content */}
         <main className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-hidden">
             {/* Left Panel */}
-            <div className="lg:col-span-3 bg-slate-800/50 border border-slate-800 rounded-lg flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-slate-800">
-                    <h2 className="text-lg font-semibold text-white">Design Input</h2>
-                </div>
-                <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
-                    <textarea
-                        className="w-full h-40 bg-slate-900 border border-slate-700 rounded-md p-2 text-sm placeholder-slate-500 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
-                        placeholder="Describe your design..."
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                    />
-
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                        className="w-full mt-4 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 text-white font-bold py-2 px-4 rounded-md transition-colors"
-                    >
-                        {isLoading ? <LoaderIcon className="w-5 h-5 animate-spin"/> : <MagicWandIcon className="w-5 h-5" />}
-                        {isLoading ? 'Generating...' : 'Generate Design'}
-                    </button>
-                    {error && <div className="mt-4 p-3 bg-red-900/50 border border-red-700 text-red-300 text-sm rounded-md">{error}</div>}
-
-                    {designSpec && (
-                        <div className="mt-6 pt-4 border-t border-slate-700">
-                            <h3 className="text-md font-semibold text-white mb-3">Actions & Analysis</h3>
-                            <div className="space-y-2">
-                                {designMode === 'product' && (
-                                    <>
-                                        <ActionButton icon={CubeIcon} label="Generate 3D Sketch" onClick={handleGenerate3dSketch} isLoading={isGenerating3dSketch} disabled={!!threeDSketchImageUrl} />
-                                        <ActionButton icon={SparklesIcon} label="Generate Lifestyle Image" onClick={handleGenerateLifestyleImage} isLoading={isGeneratingLifestyleImage} disabled={!!lifestyleImageUrl} />
-                                        <ActionButton icon={ExplodedViewIcon} label="Generate Exploded View" onClick={handleGenerateExplodedView} isLoading={isGeneratingExplodedView} disabled={!!explodedImageUrl} />
-                                        <ActionButton icon={RulerIcon} label="Generate Technical Drawing" onClick={handleGenerateTechnicalDrawing} isLoading={isGeneratingTechnicalDrawing} disabled={!!technicalDrawingImageUrl} />
-                                        <ActionButton icon={FileJsonIcon} label="Generate 3D Model (GLTF)" onClick={handleGenerateModel} isLoading={isGeneratingModel} disabled={!!gltfData} />
-                                    </>
-                                )}
-                                {designMode === 'architecture' && (
-                                    <>
-                                        <ActionButton icon={BuildingIcon} label="Generate Elevation" onClick={handleGenerateElevation} isLoading={isGeneratingElevation} disabled={!!elevationImageUrl} />
-                                        <ActionButton icon={LayersIcon} label="Generate Section" onClick={handleGenerateSection} isLoading={isGeneratingSection} disabled={!!sectionImageUrl} />
-                                        <ActionButton icon={TableIcon} label="Generate Door/Window Schedule" onClick={handleGenerateSchedule} isLoading={isGeneratingSchedule} disabled={!!schedule} />
-                                        <ActionButton icon={PaletteIcon} label="Generate Finish Schedule" onClick={handleGenerateFinishSchedule} isLoading={isGeneratingFinishSchedule} disabled={!!finishSchedule} />
-                                        <ActionButton icon={FilmIcon} label="Generate Virtual Tour Video" onClick={handleGenerateVirtualTour} isLoading={isGeneratingVirtualTour} disabled={!!virtualTourUrl} />
-                                    </>
-                                )}
-                                {designMode === 'autonomous' && (
-                                    <>
-                                         <ActionButton icon={Share2Icon} label="Generate Sensor Layout" onClick={handleGenerateSensorLayout} isLoading={isGeneratingSensorLayout} disabled={!!sensorLayoutImageUrl} />
-                                         <ActionButton icon={CpuIcon} label="Generate System Architecture" onClick={handleGenerateSystemArchitecture} isLoading={isGeneratingSystemArchitecture} disabled={!!systemArchitectureImageUrl} />
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <DesignInputPanel
+                prompt={prompt}
+                setPrompt={setPrompt}
+                isLoading={isLoading}
+                error={error}
+                designSpec={designSpec}
+                designMode={designMode}
+                handleSubmit={handleSubmit}
+                actions={{
+                    generate3dSketch: handleGenerate3dSketch,
+                    generateLifestyleImage: handleGenerateLifestyleImage,
+                    generateExplodedView: handleGenerateExplodedView,
+                    generateTechnicalDrawing: handleGenerateTechnicalDrawing,
+                    generateModel: handleGenerateModel,
+                    generateElevation: handleGenerateElevation,
+                    generateSection: handleGenerateSection,
+                    generateSchedule: handleGenerateSchedule,
+                    generateFinishSchedule: handleGenerateFinishSchedule,
+                    generateVirtualTour: handleGenerateVirtualTour,
+                    generateSensorLayout: handleGenerateSensorLayout,
+                    generateSystemArchitecture: handleGenerateSystemArchitecture,
+                }}
+                loadingStatus={{
+                    isGenerating3dSketch,
+                    isGeneratingLifestyleImage,
+                    isGeneratingExplodedView,
+                    isGeneratingTechnicalDrawing,
+                    isGeneratingModel,
+                    isGeneratingElevation,
+                    isGeneratingSection,
+                    isGeneratingSchedule,
+                    isGeneratingFinishSchedule,
+                    isGeneratingVirtualTour,
+                    isGeneratingSensorLayout,
+                    isGeneratingSystemArchitecture,
+                }}
+                hasData={{
+                    threeDSketch: !!threeDSketchImageUrl,
+                    lifestyle: !!lifestyleImageUrl,
+                    exploded: !!explodedImageUrl,
+                    technicalDrawing: !!technicalDrawingImageUrl,
+                    gltf: !!gltfData,
+                    elevation: !!elevationImageUrl,
+                    section: !!sectionImageUrl,
+                    schedule: !!schedule,
+                    finishSchedule: !!finishSchedule,
+                    virtualTour: !!virtualTourUrl,
+                    sensorLayout: !!sensorLayoutImageUrl,
+                    systemArchitecture: !!systemArchitectureImageUrl,
+                }}
+            />
 
             {/* Center Panel */}
-            <div className="lg:col-span-6 bg-slate-800/50 border border-slate-800 rounded-lg flex flex-col overflow-hidden">
-                <div className="p-2 border-b border-slate-800 shrink-0">
-                    <div className="flex space-x-1 overflow-x-auto custom-scrollbar pb-1">
-                        {sketchImageUrl && <TabButton viewId="sketch" icon={PencilIcon} label={designMode === 'architecture' ? 'Plan' : (designMode === 'autonomous' ? 'Concept' : 'Sketch')} />}
-                        {threeDSketchImageUrl && <TabButton viewId="3d-sketch" icon={CubeIcon} label="3D Sketch" />}
-                        {imageUrl && <TabButton viewId="concept" icon={ImageIcon} label={designMode === 'architecture' ? 'Exterior' : 'Concept'} />}
-                        {renderImageUrl && <TabButton viewId="render" icon={SparklesIcon} label={designMode === 'architecture' ? 'Interior' : 'Render'} />}
-                        {lifestyleImageUrl && <TabButton viewId="lifestyle" icon={CameraIcon} label="Lifestyle" />}
-                        {explodedImageUrl && <TabButton viewId="exploded" icon={ExplodedViewIcon} label="Exploded" />}
-                        {technicalDrawingImageUrl && <TabButton viewId="technical-drawing" icon={RulerIcon} label="Drawing" />}
-                        {elevationImageUrl && <TabButton viewId="elevation" icon={BuildingIcon} label="Elevation" />}
-                        {sectionImageUrl && <TabButton viewId="section" icon={LayersIcon} label="Section" />}
-                        {sensorLayoutImageUrl && <TabButton viewId="sensor-layout" icon={Share2Icon} label="Sensors" />}
-                        {systemArchitectureImageUrl && <TabButton viewId="system-architecture" icon={CpuIcon} label="Architecture" />}
-                        {virtualTourUrl && <TabButton viewId="virtual-tour" icon={FilmIcon} label="Tour" />}
-                        {gltfData && <TabButton viewId="3d-model" icon={CubeIcon} label="3D Model" />}
-                    </div>
-                </div>
-                <div className="flex-grow bg-slate-900/50 relative flex items-center justify-center p-2">
-                    {!designSpec && !isLoading && <div className="text-slate-500">Your design visualizations will appear here.</div>}
-                    {isLoading && !designSpec && <LoaderIcon className="w-8 h-8 animate-spin text-sky-500" />}
-
-                    {activeView === 'sketch' && <ImageViewer src={sketchImageUrl} alt="Concept sketch" />}
-                    {activeView === '3d-sketch' && <ImageViewer src={threeDSketchImageUrl} alt="3D sketch" />}
-                    {activeView === 'concept' && <ImageViewer src={imageUrl} alt="Product concept" />}
-                    {activeView === 'render' && <ImageViewer src={renderImageUrl} alt="Product render" />}
-                    {activeView === 'lifestyle' && <ImageViewer src={lifestyleImageUrl} alt="Lifestyle" />}
-                    {activeView === 'exploded' && <ImageViewer src={explodedImageUrl} alt="Exploded view" />}
-                    {activeView === 'elevation' && <ImageViewer src={elevationImageUrl} alt="Elevation drawing" />}
-                    {activeView === 'section' && <ImageViewer src={sectionImageUrl} alt="Section drawing" />}
-                    {activeView === 'sensor-layout' && <ImageViewer src={sensorLayoutImageUrl} alt="Sensor layout" />}
-                    {activeView === 'system-architecture' && <ImageViewer src={systemArchitectureImageUrl} alt="System architecture" />}
-
-                    {activeView === 'technical-drawing' && (
-                        technicalDrawingImageUrl ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center relative">
-                            <div className="relative w-full h-full flex items-center justify-center">
-                                <img
-                                    ref={imageRef}
-                                    src={technicalDrawingImageUrl}
-                                    alt="Technical drawing"
-                                    className="max-w-full max-h-full object-contain"
-                                    crossOrigin="anonymous"
-                                />
-                                <canvas
-                                    ref={drawingCanvasRef}
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                    style={{
-                                      pointerEvents: drawingTool ? 'auto' : 'none',
-                                      cursor: drawingTool ? 'crosshair' : 'default'
-                                    }}
-                                    onMouseDown={startDrawing}
-                                    onMouseMove={draw}
-                                    onMouseUp={stopDrawing}
-                                    onMouseLeave={stopDrawing}
-                                    onTouchStart={startDrawing}
-                                    onTouchMove={draw}
-                                    onTouchEnd={stopDrawing}
-                                />
-                            </div>
-                            {designMode === 'product' && (
-                                <div className="absolute bottom-2 left-2 right-2 p-2 bg-slate-900/80 backdrop-blur-sm rounded-md border border-slate-700 flex flex-col md:flex-row items-center gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <button title="Pen Tool" onClick={() => setDrawingTool(prev => prev === 'pen' ? null : 'pen')} className={`p-2 rounded-md ${drawingTool === 'pen' ? 'bg-sky-600 text-white' : 'bg-slate-700 hover:bg-slate-600'}`}><PencilIcon className="w-5 h-5" /></button>
-                                        <button title="Eraser Tool" onClick={() => setDrawingTool(prev => prev === 'eraser' ? null : 'eraser')} className={`p-2 rounded-md ${drawingTool === 'eraser' ? 'bg-sky-600 text-white' : 'bg-slate-700 hover:bg-slate-600'}`}><EraserIcon className="w-5 h-5" /></button>
-                                        <button
-                                            title="Clear Drawing"
-                                            onClick={() => {
-                                                const canvas = drawingCanvasRef.current;
-                                                if (canvas) {
-                                                    const ctx = canvas.getContext('2d');
-                                                    ctx?.clearRect(0, 0, canvas.width, canvas.height);
-                                                    setHasDrawing(false);
-                                                }
-                                            }}
-                                            className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md disabled:opacity-50"
-                                            disabled={!hasDrawing}
-                                        >Clear</button>
-                                    </div>
-                                    <div className="flex-grow flex items-center gap-2 w-full md:w-auto">
-                                        <input
-                                            type="text"
-                                            value={refineInstruction}
-                                            onChange={(e) => setRefineInstruction(e.target.value)}
-                                            placeholder="e.g., 'Make this dimension 50mm instead of 45mm'"
-                                            className="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-sm placeholder-slate-500 focus:ring-1 focus:ring-sky-500 outline-none"
-                                        />
-                                        <button onClick={handleRefineDrawing} disabled={isRefiningDrawing || !refineInstruction.trim()} className="p-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-md text-white">
-                                            {isRefiningDrawing ? <LoaderIcon className="w-5 h-5 animate-spin"/> : <SendIcon className="w-5 h-5" />}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        ) : (
-                        <p className="text-slate-400">Technical drawing not available.</p>
-                        )
-                    )}
-
-                    {activeView === 'virtual-tour' && (
-                        <div className="w-full h-full flex flex-col items-center justify-center">
-                            {virtualTourUrl ? (
-                                <>
-                                <video key={virtualTourUrl} controls autoPlay loop className="max-w-full max-h-full">
-                                    <source src={virtualTourUrl} type="video/mp4" />
-                                    Your browser does not support the video tag.
-                                </video>
-                                <div className="absolute bottom-0 left-0 right-0 p-2 bg-yellow-900/80 backdrop-blur-sm border-t border-yellow-700">
-                                    <div className="flex items-center text-yellow-200 text-xs max-w-full mx-auto">
-                                        <AlertTriangleIcon className="w-4 h-4 mr-2 shrink-0" />
-                                        <p><strong className="font-bold">Security Warning:</strong> For video playback, your API key is appended to the URL and may be visible in your browser's network inspector.</p>
-                                    </div>
-                                </div>
-                                </>
-                            ) : (
-                                <p className="text-slate-400">Video not available.</p>
-                            )}
-                        </div>
-                    )}
-                    {activeView === '3d-model' && gltfData && <ModelViewer gltfJson={gltfData} simulationVerdict={simulationResult?.verdict} />}
-                </div>
-            </div>
+            <VisualizerPanel
+                designMode={designMode}
+                designSpec={designSpec}
+                isLoading={isLoading}
+                activeView={activeView}
+                setActiveView={setActiveView}
+                images={{
+                    sketch: sketchImageUrl,
+                    threeDSketch: threeDSketchImageUrl,
+                    concept: imageUrl,
+                    render: renderImageUrl,
+                    lifestyle: lifestyleImageUrl,
+                    exploded: explodedImageUrl,
+                    technicalDrawing: technicalDrawingImageUrl,
+                    elevation: elevationImageUrl,
+                    section: sectionImageUrl,
+                    sensorLayout: sensorLayoutImageUrl,
+                    systemArchitecture: systemArchitectureImageUrl,
+                }}
+                gltfData={gltfData}
+                virtualTourUrl={virtualTourUrl}
+                simulationResult={simulationResult}
+                drawingTools={{
+                    drawingTool,
+                    setDrawingTool,
+                    isRefiningDrawing,
+                    refineInstruction,
+                    setRefineInstruction,
+                    handleRefineDrawing,
+                    hasDrawing,
+                    setHasDrawing,
+                    drawingCanvasRef,
+                    imageRef,
+                    startDrawing,
+                    draw,
+                    stopDrawing
+                }}
+            />
 
             {/* Right Panel */}
-            <div className="lg:col-span-3 bg-slate-800/50 border border-slate-800 rounded-lg flex flex-col overflow-hidden">
-                <div className="flex border-b border-slate-800 shrink-0">
-                    <RightPanelTabButton tabId="spec" icon={FileCodeIcon} label="Spec" />
-                    <RightPanelTabButton tabId="chat" icon={MessageSquareIcon} label="Chat" />
-                    <RightPanelTabButton tabId="history" icon={HistoryIcon} label="History" />
-                    <RightPanelTabButton tabId="comments" icon={MessageSquareIcon} label="Comments" />
-                </div>
-                <div className="flex-grow overflow-y-auto custom-scrollbar">
-                  {activeTab === 'spec' && (
-                     <div className="p-4">
-                        {designSpec ? <pre className="text-xs text-slate-300 whitespace-pre-wrap break-words">{JSON.stringify(designSpec, null, 2)}</pre> : <p className="text-slate-500 text-sm">Design specification will appear here.</p>}
-                     </div>
-                  )}
-                  {activeTab === 'chat' && (
-                    <div className="flex flex-col h-full">
-                       <div ref={chatContainerRef} className="flex-grow p-4 space-y-4 overflow-y-auto">
-                            {chatHistory.map((msg, index) => (
-                                <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-xs md:max-w-sm lg:max-w-md p-3 rounded-lg ${msg.role === 'user' ? 'bg-sky-800 text-white' : 'bg-slate-700'}`}>
-                                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {isChatLoading && (
-                                <div className="flex justify-start">
-                                    <div className="p-3 rounded-lg bg-slate-700">
-                                        <LoaderIcon className="w-5 h-5 animate-spin"/>
-                                    </div>
-                                </div>
-                            )}
-                       </div>
-                       <div className="p-4 border-t border-slate-700">
-                            <div className="flex items-center gap-2">
-                                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleChatSubmit()} placeholder={designSpec ? "Refine the spec..." : "Generate a design first"} disabled={!designSpec || isChatLoading} className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm focus:ring-1 focus:ring-sky-500 outline-none" />
-                                <button onClick={handleChatSubmit} disabled={!chatInput.trim() || isChatLoading} className="p-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 rounded-md text-white"><SendIcon className="w-5 h-5"/></button>
-                            </div>
-                       </div>
-                    </div>
-                  )}
-                  {activeTab === 'history' && (
-                    <div className="p-4 space-y-2">
-                        {designHistory.length > 0 ? designHistory.slice().reverse().map((version, index) => (
-                            <div key={index} className="flex justify-between items-center p-2 bg-slate-900/50 rounded-md">
-                                <div>
-                                    <p className="text-sm font-medium">{version.name}</p>
-                                    <p className="text-xs text-slate-400">{new Date(version.timestamp).toLocaleString()}</p>
-                                </div>
-                                <button onClick={() => loadVersion(version)} className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded">Load</button>
-                            </div>
-                        )) : <p className="text-slate-500 text-sm">No version history yet.</p>}
-                    </div>
-                  )}
-                   {activeTab === 'comments' && (
-                    <div className="flex flex-col h-full">
-                       <div className="flex-grow p-4 space-y-3 overflow-y-auto">
-                           {comments.length > 0 ? comments.map((comment, index) => (
-                               <div key={index} className="p-2 bg-slate-700/50 rounded-md">
-                                   <p className="text-sm">{comment.text}</p>
-                                   <p className="text-xs text-slate-500 text-right mt-1">{new Date(comment.timestamp).toLocaleString()}</p>
-                               </div>
-                           )) : <p className="text-slate-500 text-sm">No comments yet.</p>}
-                       </div>
-                       <div className="p-4 border-t border-slate-700">
-                           <textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Add a comment..." className="w-full text-sm bg-slate-900 border border-slate-600 rounded-md p-2 h-20 outline-none focus:ring-1 focus:ring-sky-500"></textarea>
-                           <button onClick={handleAddComment} className="mt-2 w-full py-1.5 bg-slate-700 hover:bg-slate-600 rounded-md text-sm">Add Comment</button>
-                       </div>
-                    </div>
-                   )}
-                </div>
-            </div>
+            <InfoPanel
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                designSpec={designSpec}
+                chatHistory={chatHistory}
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                isChatLoading={isChatLoading}
+                handleChatSubmit={handleChatSubmit}
+                designHistory={designHistory}
+                loadVersion={loadVersion}
+                comments={comments}
+                newComment={newComment}
+                setNewComment={setNewComment}
+                handleAddComment={handleAddComment}
+            />
         </main>
 
         {isShareModalOpen && (
