@@ -5,7 +5,7 @@ import { LoadingSpinner, LoadingOverlay, LoadingSkeleton } from '../LoadingSpinn
 describe('LoadingSpinner', () => {
   it('renders with default props', () => {
     render(<LoadingSpinner />)
-    const spinner = screen.getByRole('generic')
+    const spinner = screen.getByTestId('lucide-Loader2')
     expect(spinner).toBeInTheDocument()
   })
 

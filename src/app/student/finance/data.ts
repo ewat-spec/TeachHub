@@ -27,14 +27,14 @@ export interface PaymentRecord {
   invoiceId?: string; // Optional link to a specific invoice
   datePaid: string; // ISO Date string
   amount: number;
-  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money";
+  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money" | "Cardano (ADA)";
   reference?: string;
   description: string;
 }
 
 const MOCK_STUDENT_ID = "studentAlexDemo"; // Matches student dashboard mock
 
-export const mockInvoicesData: Invoice[] = [
+export let mockInvoicesData: Invoice[] = [
   {
     id: "inv001",
     invoiceNumber: "INV-2024-001",
@@ -70,7 +70,7 @@ export const mockInvoicesData: Invoice[] = [
   },
 ];
 
-export const mockPaymentsData: PaymentRecord[] = [
+export let mockPaymentsData: PaymentRecord[] = [
   {
     id: "pay001",
     studentId: MOCK_STUDENT_ID,

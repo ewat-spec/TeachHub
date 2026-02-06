@@ -34,7 +34,7 @@ export interface PaymentRecord {
   invoiceId?: string; // Optional link to a specific invoice
   datePaid: string; // ISO Date string
   amount: number;
-  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money";
+  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money" | "Cardano (ADA)";
   reference?: string;
   description: string;
 }

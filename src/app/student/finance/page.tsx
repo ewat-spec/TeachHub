@@ -4,25 +4,46 @@
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Landmark, Receipt, FileText, CalendarDays, Hash } from "lucide-react";
+import { DollarSign, Landmark, Receipt, FileText, CalendarDays, Hash, CreditCard, Wallet, Copy, CheckCircle, Loader2, QrCode } from "lucide-react";
 import { format } from "date-fns";
-import { getStudentFinancials, type Invoice, type PaymentRecord } from "./data";
+import { type Invoice, type PaymentRecord } from "./data";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { convertKEStoADA, generateMockPaymentAddress, verifyCardanoTransaction } from "@/lib/cardano";
+import { recordStudentPayment, getStudentFinancialsAction } from "./actions";
 
 export default function StudentFinancePage() {
+  const { toast } = useToast();
   const [financials, setFinancials] = useState<{
     invoices: Invoice[];
     payments: PaymentRecord[];
     outstandingBalance: number;
   } | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [txHash, setTxHash] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refreshFinancials = async () => {
+     setIsRefreshing(true);
+     const data = await getStudentFinancialsAction("studentAlexDemo");
+     setFinancials(data);
+     setIsRefreshing(false);
+  };
 
   useEffect(() => {
     setIsClient(true);
     // In a real app, studentId would come from auth context
-    setFinancials(getStudentFinancials("studentAlexDemo")); 
+    refreshFinancials();
   }, []);
 
   if (!isClient || !financials) {
@@ -53,14 +74,21 @@ export default function StudentFinancePage() {
             Financial Summary
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-lg">
-          <p>
-            Current Outstanding Balance:{" "}
-            <span className={`font-bold ${outstandingBalance > 0 ? "text-destructive" : "text-green-600"}`}>
-              KES {outstandingBalance.toLocaleString()}
-            </span>
-          </p>
-          {outstandingBalance <= 0 && <p className="text-green-600 text-sm mt-1">Your account is up to date. Thank you!</p>}
+        <CardContent className="text-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <p>
+              Current Outstanding Balance:{" "}
+              <span className={`font-bold ${outstandingBalance > 0 ? "text-destructive" : "text-green-600"}`}>
+                KES {outstandingBalance.toLocaleString()}
+              </span>
+            </p>
+            {outstandingBalance <= 0 && <p className="text-green-600 text-sm mt-1">Your account is up to date. Thank you!</p>}
+          </div>
+          {outstandingBalance > 0 && (
+            <Button size="lg" className="shadow-md" onClick={() => setIsPaymentModalOpen(true)}>
+              <Landmark className="mr-2 h-5 w-5" /> Pay Now
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -168,6 +196,127 @@ export default function StudentFinancePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-headline flex items-center gap-2">
+              <DollarSign className="h-6 w-6 text-primary" />
+              Make a Payment
+            </DialogTitle>
+            <DialogDescription>
+              Choose your preferred payment method to clear your outstanding balance of <strong>KES {outstandingBalance.toLocaleString()}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="cardano" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="cardano" className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" /> Cardano (ADA)
+              </TabsTrigger>
+              <TabsTrigger value="traditional" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" /> Traditional
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="cardano" className="space-y-4 pt-4">
+              <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Amount to Pay (KES)</span>
+                  <span className="font-bold">KES {outstandingBalance.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-primary">
+                  <span className="text-sm font-medium">Equivalent in ADA</span>
+                  <span className="text-xl font-bold">{convertKEStoADA(outstandingBalance)} ADA</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Send ADA to this Address</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={generateMockPaymentAddress()} className="font-mono text-xs" />
+                  <Button variant="outline" size="icon" onClick={() => {
+                    navigator.clipboard.writeText(generateMockPaymentAddress());
+                    toast({ title: "Copied", description: "Address copied to clipboard." });
+                  }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic text-center">
+                  Note: This is a mock international transaction via Cardano blockchain.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="txHash">Transaction Hash</Label>
+                <Input
+                  id="txHash"
+                  placeholder="Enter transaction hash (e.g., 0x...)"
+                  value={txHash}
+                  onChange={(e) => setTxHash(e.target.value)}
+                />
+              </div>
+
+              <Button
+                className="w-full"
+                disabled={!txHash || isVerifying || isSubmitting}
+                onClick={async () => {
+                  setIsVerifying(true);
+                  const status = await verifyCardanoTransaction(txHash);
+                  setIsVerifying(false);
+
+                  if (status.success) {
+                    setIsSubmitting(true);
+                    const result = await recordStudentPayment({
+                      studentId: "studentAlexDemo",
+                      amount: outstandingBalance,
+                      paymentMethod: "Cardano (ADA)",
+                      description: `International Payment via Cardano (Hash: ${txHash.substring(0, 10)}...)`,
+                      reference: txHash
+                    });
+                    setIsSubmitting(false);
+
+                    if (result.success) {
+                      toast({
+                        title: "Payment Successful",
+                        description: result.message,
+                        action: <CheckCircle className="text-green-500" />
+                      });
+                      setIsPaymentModalOpen(false);
+                      setTxHash("");
+                      refreshFinancials();
+                    } else {
+                      toast({ title: "Error", description: result.message, variant: "destructive" });
+                    }
+                  } else {
+                    toast({ title: "Verification Failed", description: status.message, variant: "destructive" });
+                  }
+                }}
+              >
+                {isVerifying ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying on Blockchain...</>
+                ) : isSubmitting ? (
+                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording Payment...</>
+                ) : (
+                  <><QrCode className="mr-2 h-4 w-4" /> Verify & Complete Payment</>
+                )}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="traditional" className="space-y-4 pt-4">
+               <div className="p-8 text-center border-2 border-dashed rounded-lg">
+                  <p className="text-muted-foreground">Traditional payment methods (Card, M-Pesa, Bank Transfer) are handled locally.</p>
+                  <Button variant="link" className="mt-2 text-primary">Contact Finance Office for assistance</Button>
+               </div>
+               <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" className="w-full">Close</Button>
+                  </DialogClose>
+               </DialogFooter>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

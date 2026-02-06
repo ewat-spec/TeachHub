@@ -32,7 +32,7 @@ const recordPaymentSchema = z.object({
   studentId: z.string(), // Will be hidden, pre-filled
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
   paymentDate: z.date({ required_error: "Payment date is required."}),
-  paymentMethod: z.enum(["Bank Transfer", "Card", "Cash", "Mobile Money"], { required_error: "Payment method is required."}),
+  paymentMethod: z.enum(["Bank Transfer", "Card", "Cash", "Mobile Money", "Cardano (ADA)"], { required_error: "Payment method is required."}),
   description: z.string().optional(),
   reference: z.string().optional(),
   applyToInvoiceId: z.string().optional(),
@@ -310,8 +310,11 @@ export default function AdminFinancePage() {
                   <FormItem><FormLabel>Payment Method</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger></FormControl>
                         <SelectContent>
-                            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem><SelectItem value="Card">Card</SelectItem>
-                            <SelectItem value="Cash">Cash</SelectItem><SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                            <SelectItem value="Card">Card</SelectItem>
+                            <SelectItem value="Cash">Cash</SelectItem>
+                            <SelectItem value="Mobile Money">Mobile Money</SelectItem>
+                            <SelectItem value="Cardano (ADA)">Cardano (ADA)</SelectItem>
                         </SelectContent>
                     </Select><FormMessage/>
                   </FormItem>
