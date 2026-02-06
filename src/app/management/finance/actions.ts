@@ -44,7 +44,7 @@ interface RecordPaymentInput {
   studentId: string;
   amount: number;
   paymentDate: string; // ISO string
-  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money";
+  paymentMethod: "Bank Transfer" | "Card" | "Cash" | "Mobile Money" | "Cardano (ADA)";
   description?: string;
   reference?: string;
   applyToInvoiceId?: string; // Optional: if payment is for a specific invoice
