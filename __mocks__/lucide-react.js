@@ -35,6 +35,12 @@ const icons = {
   CalendarIcon: mockIcon('CalendarIcon'),
   PlusCircle: mockIcon('PlusCircle'),
   Trash2: mockIcon('Trash2'),
+  ArrowRight: mockIcon('ArrowRight'),
+  ShieldCheck: mockIcon('ShieldCheck'),
+  Zap: mockIcon('Zap'),
+  LayoutDashboard: mockIcon('LayoutDashboard'),
+  LogOut: mockIcon('LogOut'),
+  User: mockIcon('User'),
 };
 
 module.exports = icons;

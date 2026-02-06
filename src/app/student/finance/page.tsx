@@ -16,8 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { convertKEStoADA, generateMockPaymentAddress, verifyCardanoTransaction } from "@/lib/cardano";
-import { recordStudentPayment, getStudentFinancialsAction } from "./actions";
+import { getStudentFinancialsAction } from "./actions";
+import { BlockchainPayment } from "./BlockchainPayment";
 
 export default function StudentFinancePage() {
   const { toast } = useToast();
@@ -28,9 +28,6 @@ export default function StudentFinancePage() {
   } | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [txHash, setTxHash] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refreshFinancials = async () => {
@@ -219,88 +216,15 @@ export default function StudentFinancePage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cardano" className="space-y-4 pt-4">
-              <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Amount to Pay (KES)</span>
-                  <span className="font-bold">KES {outstandingBalance.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center text-primary">
-                  <span className="text-sm font-medium">Equivalent in ADA</span>
-                  <span className="text-xl font-bold">{convertKEStoADA(outstandingBalance)} ADA</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Send ADA to this Address</Label>
-                <div className="flex gap-2">
-                  <Input readOnly value={generateMockPaymentAddress()} className="font-mono text-xs" />
-                  <Button variant="outline" size="icon" onClick={() => {
-                    navigator.clipboard.writeText(generateMockPaymentAddress());
-                    toast({ title: "Copied", description: "Address copied to clipboard." });
-                  }}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground italic text-center">
-                  Note: This is a mock international transaction via Cardano blockchain.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="txHash">Transaction Hash</Label>
-                <Input
-                  id="txHash"
-                  placeholder="Enter transaction hash (e.g., 0x...)"
-                  value={txHash}
-                  onChange={(e) => setTxHash(e.target.value)}
-                />
-              </div>
-
-              <Button
-                className="w-full"
-                disabled={!txHash || isVerifying || isSubmitting}
-                onClick={async () => {
-                  setIsVerifying(true);
-                  const status = await verifyCardanoTransaction(txHash);
-                  setIsVerifying(false);
-
-                  if (status.success) {
-                    setIsSubmitting(true);
-                    const result = await recordStudentPayment({
-                      studentId: "studentAlexDemo",
-                      amount: outstandingBalance,
-                      paymentMethod: "Cardano (ADA)",
-                      description: `International Payment via Cardano (Hash: ${txHash.substring(0, 10)}...)`,
-                      reference: txHash
-                    });
-                    setIsSubmitting(false);
-
-                    if (result.success) {
-                      toast({
-                        title: "Payment Successful",
-                        description: result.message,
-                        action: <CheckCircle className="text-green-500" />
-                      });
-                      setIsPaymentModalOpen(false);
-                      setTxHash("");
-                      refreshFinancials();
-                    } else {
-                      toast({ title: "Error", description: result.message, variant: "destructive" });
-                    }
-                  } else {
-                    toast({ title: "Verification Failed", description: status.message, variant: "destructive" });
-                  }
+            <TabsContent value="cardano">
+              <BlockchainPayment
+                amountKES={outstandingBalance}
+                studentId="studentAlexDemo"
+                onSuccess={() => {
+                  setIsPaymentModalOpen(false);
+                  refreshFinancials();
                 }}
-              >
-                {isVerifying ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying on Blockchain...</>
-                ) : isSubmitting ? (
-                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording Payment...</>
-                ) : (
-                  <><QrCode className="mr-2 h-4 w-4" /> Verify & Complete Payment</>
-                )}
-              </Button>
+              />
             </TabsContent>
 
             <TabsContent value="traditional" className="space-y-4 pt-4">
