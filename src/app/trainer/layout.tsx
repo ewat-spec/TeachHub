@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
   { href: "/trainer/class-lists", icon: <BookMarked />, label: "Courses & Grading", tooltip: "Manage Course Resources & Marksheets" },
   { href: "/trainer/portfolios", icon: <FolderKanban />, label: "Student Portfolios", tooltip: "Student Portfolios of Evidence" },
   { href: "/trainer/student-questions", icon: <MessageCircle />, label: "Student Questions", tooltip: "View Questions from Students" },
+  { href: "/trainer/notebook", icon: <BookOpenText />, label: "Notebook LM", tooltip: "Manage AI Notebook Content" },
   { href: "/trainer/notifications", icon: <Bell />, label: "My Notifications", tooltip: "My Notifications" },
 ];
 
@@ -158,6 +159,14 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      // Mock auth if firebase is not initialized
+      console.warn("Firebase Auth not initialized. Using mock trainer.");
+      setUser({ uid: "mock-trainer", email: "mock@trainer.com" });
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
