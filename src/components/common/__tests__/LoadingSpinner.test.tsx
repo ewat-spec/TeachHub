@@ -4,9 +4,8 @@ import { LoadingSpinner, LoadingOverlay, LoadingSkeleton } from '../LoadingSpinn
 
 describe('LoadingSpinner', () => {
   it('renders with default props', () => {
-    render(<LoadingSpinner />)
-    const spinner = screen.getByRole('generic')
-    expect(spinner).toBeInTheDocument()
+    const { container } = render(<LoadingSpinner />)
+    expect(container.firstChild).toHaveClass('flex', 'items-center', 'justify-center')
   })
 
   it('renders with text', () => {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { TeachHubLogo } from "@/components/icons/TeachHubLogo";
 import { Button } from "@/components/ui/button";
-import { LogOut, UserCircle, CreditCard, LayoutDashboard, GraduationCap, Loader2 } from "lucide-react";
+import { LogOut, UserCircle, CreditCard, LayoutDashboard, GraduationCap, Loader2, BookOpen } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation"; 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -89,6 +89,9 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
           <div className="flex flex-1 items-center justify-end space-x-1">
             <Button variant="ghost" size="sm" asChild className={pathname === "/student/dashboard" ? "bg-muted" : ""}>
               <Link href="/student/dashboard"><LayoutDashboard className="mr-1.5 h-5 w-5"/> Dashboard</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild className={pathname.startsWith("/student/notebook") ? "bg-muted" : ""}>
+              <Link href="/student/notebook"><BookOpen className="mr-1.5 h-5 w-5"/> AI Notebook</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild className={pathname.startsWith("/student/academic-record") ? "bg-muted" : ""}>
               <Link href="/student/academic-record"><GraduationCap className="mr-1.5 h-5 w-5"/> Academic Record</Link>
