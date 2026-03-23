@@ -29,7 +29,7 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
         return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    if(!auth) return; const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
@@ -50,7 +50,7 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
         return;
     }
     try {
-      await signOut(auth);
+      if(auth) { await signOut(auth); }
       toast({ title: "Logged Out", description: "You have been successfully signed out." });
       router.push('/student/login'); 
     } catch (error) {

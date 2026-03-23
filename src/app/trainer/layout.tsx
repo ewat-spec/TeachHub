@@ -66,7 +66,7 @@ function TrainerAppLayoutContent({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      if(auth) { await signOut(auth); }
       toast({ title: "Logged Out", description: "You have been successfully signed out." });
       router.push('/trainer/login'); 
     } catch (error) {
@@ -158,7 +158,7 @@ export default function TrainerAppLayout({ children }: { children: ReactNode }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    if(!auth) return; const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {

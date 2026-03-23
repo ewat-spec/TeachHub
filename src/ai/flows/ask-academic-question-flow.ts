@@ -12,7 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { runMonteCarloIntegration } from '@/ai/tools/monteCarloTool';
-import { askWolframAlpha } from '@/ai/tools/wolframAlphaTool'; // Import the new tool
+import { askWolframAlpha as wolframAlphaTool } from '@/ai/tools/wolframAlphaTool'; // Import the new tool
 
 const AskAcademicQuestionInputSchema = z.object({
   question: z
@@ -52,7 +52,7 @@ const prompt = ai.definePrompt({
   name: 'askAcademicQuestionPrompt',
   input: {schema: AskAcademicQuestionInputSchema},
   output: {schema: AskAcademicQuestionOutputSchema},
-  tools: [runMonteCarloIntegration, askWolframAlpha],
+  tools: [runMonteCarloIntegration, wolframAlphaTool],
   config: {
     safetySettings: [
       {
@@ -120,14 +120,16 @@ Provide your comprehensive, guided answer now.
 `,
 });
 
-const askAcademicQuestionFlow = ai.defineFlow(
+export const askAcademicQuestionFlow = ai.defineFlow(
   {
     name: 'askAcademicQuestionFlow',
     inputSchema: AskAcademicQuestionInputSchema,
     outputSchema: AskAcademicQuestionOutputSchema,
   },
   async (input: AskAcademicQuestionInput) => {
-    const {output, response} = await prompt(input);
+    const result = await prompt(input);
+    const output = result.output;
+    const response = (result as any).response || { candidates: [{ finishReason: 'UNKNOWN' }] };
     if (!output) {
         const finishReason = response.candidates[0]?.finishReason;
         if (finishReason === 'SAFETY') {

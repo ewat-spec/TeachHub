@@ -14,8 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, CheckCircle, Save, Printer, FileSpreadsheet, PlusCircle, Edit, Trash2, FileText, Video, Link as LinkIcon, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
+
 import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+
 
 import type { Course, Marksheet, CourseResource } from "./data";
 import { getTrainerCourses, getMarksheetData, saveMarks, updateCourseResources } from "./actions";

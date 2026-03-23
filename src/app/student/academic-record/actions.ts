@@ -21,7 +21,7 @@ export async function getStudentAcademicRecord(studentId: string): Promise<Acade
     if (!studentId) return null;
 
     try {
-        const studentDoc = await getDoc(doc(db, 'students', studentId));
+        if(!db) return null; const studentDoc = await getDoc(doc(db, 'students', studentId));
         if (!studentDoc.exists()) {
             console.warn(`No student found with ID: ${studentId}`);
             return null;
@@ -57,9 +57,9 @@ export async function getStudentAcademicRecord(studentId: string): Promise<Acade
 
                 assessmentResults.push({
                     assessmentId: assessment.id,
-                    assessmentTitle: assessment.title,
+                    assessmentTitle: (assessment as any).title,
                     mark: typeof markData.mark === 'number' ? markData.mark : null,
-                    totalMarks: assessment.totalMarks,
+                    totalMarks: (assessment as any).totalMarks,
                     comments: markData.comments,
                 });
             }
@@ -76,8 +76,8 @@ export async function getStudentAcademicRecord(studentId: string): Promise<Acade
 
             courseRecords.push({
                 courseId: course.id,
-                courseCode: course.code,
-                courseName: course.name,
+                courseCode: (course as any).code,
+                courseName: (course as any).name,
                 assessments: assessmentResults,
                 courseAverage: courseAverage
             });

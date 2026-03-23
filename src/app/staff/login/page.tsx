@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -21,11 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogIn, Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
+  role: z.string().min(1, "Please select a role."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -40,8 +41,18 @@ const GoogleIcon = () => (
     </svg>
 );
 
+const roles = [
+  { value: "trainer", label: "Trainer" },
+  { value: "management", label: "Management/Admin" },
+  { value: "director", label: "Director" },
+  { value: "hod", label: "HOD" },
+  { value: "dean", label: "Dean of Students" },
+  { value: "timetabler", label: "Timetabler" },
+  { value: "finance", label: "Finance" },
+  { value: "security", label: "Security" },
+];
 
-export default function TrainerLoginPage() {
+export default function StaffLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
@@ -54,8 +65,31 @@ export default function TrainerLoginPage() {
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", role: "" },
   });
+
+  const getRedirectPath = (role: string) => {
+    switch (role) {
+      case "trainer":
+        return "/trainer/dashboard";
+      case "management":
+        return "/management/dashboard";
+      case "director":
+        return "/management/director";
+      case "hod":
+        return "/management/hod";
+      case "dean":
+        return "/management/dean";
+      case "timetabler":
+        return "/management/timetabler";
+      case "finance":
+        return "/management/finance";
+      case "security":
+        return "/security/dashboard"; // Assuming a future security portal
+      default:
+        return "/management/dashboard";
+    }
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
@@ -68,7 +102,9 @@ export default function TrainerLoginPage() {
       } else {
         if(auth) { await signInWithEmailAndPassword(auth, data.email, data.password); } else { throw new Error("Auth missing"); }
         toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
-        router.push('/trainer/dashboard');
+
+        // Use the selected role to redirect
+        router.push(getRedirectPath(data.role));
       }
     } catch (error: any) {
       logger.error('Email sign-in failed', error, { email: data.email });
@@ -79,12 +115,18 @@ export default function TrainerLoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    const role = form.getValues().role;
+    if (!role) {
+      form.setError("role", { type: "manual", message: "Please select a role before signing in with Google." });
+      return;
+    }
+
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       if(auth) { await signInWithPopup(auth, provider); } else { throw new Error("Auth missing"); }
       toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
-      router.push('/trainer/dashboard');
+      router.push(getRedirectPath(role));
     } catch (error: any) {
       logger.error('Google sign-in failed', error);
       let description = "Could not sign in with Google. Please try another method.";
@@ -108,26 +150,47 @@ export default function TrainerLoginPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
             <TeachHubLogo className="h-10 w-10 text-primary" />
-            <CardTitle className="text-3xl font-headline">Trainer Portal</CardTitle>
+            <CardTitle className="text-3xl font-headline">Staff Portal</CardTitle>
           </div>
-          <CardDescription>Sign in with your email and password.</CardDescription>
+          <CardDescription>Sign in to your respective portal.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
-              Sign in with Google
-            </Button>
-            
-            <div className="my-4 flex items-center">
-                <div className="flex-grow border-t border-muted"></div>
-                <span className="flex-shrink mx-2 text-xs text-muted-foreground">OR</span>
-                <div className="flex-grow border-t border-muted"></div>
-            </div>
-
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="role" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Login As</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {roles.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}/>
+
+                <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon />}
+                  Sign in with Google
+                </Button>
+
+                <div className="my-4 flex items-center">
+                    <div className="flex-grow border-t border-muted"></div>
+                    <span className="flex-shrink mx-2 text-xs text-muted-foreground">OR</span>
+                    <div className="flex-grow border-t border-muted"></div>
+                </div>
+
                 <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="trainer@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="staff@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>

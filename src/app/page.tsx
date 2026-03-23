@@ -1,8 +1,7 @@
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { TeachHubLogo } from '@/components/icons/TeachHubLogo';
-import { GraduationCap, LogIn, Server } from 'lucide-react';
+import { GraduationCap, LogIn, ShieldAlert } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -20,19 +19,14 @@ export default function HomePage() {
         </p>
         
         <div className="flex flex-col items-center gap-4 mt-6 w-full max-w-xs animate-fade-in-up delay-700">
-          <Link href="/trainer" passHref className="w-full">
+          <Link href="/staff/login" passHref className="w-full">
             <Button size="lg" className="w-full justify-start text-lg py-7 rounded-lg shadow-lg hover:shadow-primary/20 transition-shadow">
-              <LogIn className="mr-4 h-5 w-5" /> Trainer Portal
+              <LogIn className="mr-4 h-5 w-5" /> Staff Portal
             </Button>
           </Link>
           <Link href="/student" passHref className="w-full">
             <Button size="lg" variant="outline" className="w-full justify-start text-lg py-7 rounded-lg shadow-lg border-border hover:bg-primary/5">
                <GraduationCap className="mr-4 h-5 w-5" /> Student Portal
-            </Button>
-          </Link>
-          <Link href="/management/dashboard" passHref className="w-full">
-            <Button size="lg" variant="secondary" className="w-full justify-start text-lg py-7 rounded-lg shadow-lg">
-              <Server className="mr-4 h-5 w-5" /> Management Portal
             </Button>
           </Link>
         </div>
