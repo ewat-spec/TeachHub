@@ -10,7 +10,7 @@ const MOCK_TRAINER_ID = "trainerJane";
 
 export async function getAssessments() {
     try {
-        const assessmentsCol = collection(db, 'assessments');
+        if(!db) return []; if(!db) return []; const assessmentsCol = collection(db, 'assessments');
         // In a real app, you'd query by trainer ID: const q = query(assessmentsCol, where("trainerId", "==", MOCK_TRAINER_ID));
         const snapshot = await getDocs(assessmentsCol);
         if (snapshot.empty) {
@@ -45,13 +45,13 @@ export async function saveAssessment(assessmentData: any) {
     if (id) {
       // Update existing document
       dataToSave.updatedAt = serverTimestamp();
-      const assessmentDoc = doc(db, 'assessments', id);
+      if(!db) return {success: false, message: 'DB Error'}; const assessmentDoc = doc(db, 'assessments', id);
       await updateDoc(assessmentDoc, dataToSave);
       return { success: true, message: "Assessment updated successfully!", id: id };
     } else {
       // Create new document
       dataToSave.createdAt = serverTimestamp();
-      const docRef = await addDoc(collection(db, 'assessments'), dataToSave);
+      if(!db) return {success: false}; if(!db) return {success: false, message: 'DB Error'}; const docRef = await addDoc(collection(db, 'assessments'), dataToSave);
       return { success: true, message: "Assessment saved successfully!", id: docRef.id };
     }
   } catch (error) {
@@ -64,6 +64,7 @@ export async function saveAssessment(assessmentData: any) {
 }
 
 export async function deleteAssessment(assessmentId: string) {
+ if(!db) return {success: false, message: 'DB Error'};
   console.log("Deleting assessment from Firestore:", assessmentId);
   try {
     if (!assessmentId) {

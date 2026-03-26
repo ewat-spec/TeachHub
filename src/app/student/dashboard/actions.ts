@@ -2,7 +2,7 @@
 'use server';
 
 import {
-  askAcademicQuestion,
+  askAcademicQuestionFlow as askAcademicQuestion,
   type AskAcademicQuestionInput,
   type AskAcademicQuestionOutput,
 } from '@/ai/flows/ask-academic-question-flow';

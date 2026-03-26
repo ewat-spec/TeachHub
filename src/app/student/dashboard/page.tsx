@@ -72,7 +72,7 @@ interface MockAnnouncement {
 const mockAnnouncements: MockAnnouncement[] = [
     {id: "ann1", title: "Practical Assessment: Engine Systems (AUT201)", date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), content: "The practical assessment for AUT201 is next week. Ensure all pre-assessment tasks are completed.", type: "alert", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()},
     {id: "ann2", title: "Guest Lecture: EV Technology", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday.", type: "info", dueDate: null},
-    {id: "ann3", title: "Reminder: PoE Submission for AUT202", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), content: `PoE for Vehicle Electrical Systems is due on ${format(parseISO(mockCourses.find(c => c.id === 'unit2')?.poeDueDate || new Date()), "MMM dd")}.`, type: "reminder", dueDate: mockCourses.find(c => c.id === 'unit2')?.poeDueDate},
+    {id: "ann3", title: "Reminder: PoE Submission for AUT202", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), content: `PoE for Vehicle Electrical Systems is due on ${format(parseISO((mockCourses.find(c => c.id === "unit2")?.poeDueDate || new Date().toISOString()) as string), "MMM dd")}.`, type: "reminder", dueDate: mockCourses.find(c => c.id === 'unit2')?.poeDueDate},
 ];
 
 const aiQuestionFormSchema = z.object({
@@ -184,7 +184,7 @@ export default function StudentDashboardPage() {
   const upcomingDeadlines = useMemo(() => {
     if (!isClient) return [];
     const today = new Date();
-    const items = [];
+    const items: any[] = [];
 
     // PoE Deadlines from courses
     mockCourses.forEach(course => {

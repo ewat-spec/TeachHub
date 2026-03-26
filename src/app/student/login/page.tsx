@@ -95,12 +95,12 @@ export default function StudentLoginPage() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        if(auth) { await createUserWithEmailAndPassword(auth, data.email, data.password); } else { throw new Error("Auth missing"); }
         toast({ title: "Account Created", description: "You have been successfully registered. Please log in." });
         setIsSignUp(false); // Switch to login view after successful signup
         emailForm.reset();
       } else {
-        await signInWithEmailAndPassword(auth, data.email, data.password);
+        if(auth) { await signInWithEmailAndPassword(auth, data.email, data.password); } else { throw new Error("Auth missing"); }
         toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
         router.push('/student/dashboard');
       }
@@ -120,7 +120,7 @@ export default function StudentLoginPage() {
       const recaptchaContainer = document.getElementById('recaptcha-container');
       if (recaptchaContainer) recaptchaContainer.innerHTML = '';
 
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      if(!auth) return; window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         'size': 'invisible',
         'callback': (response: any) => {
           // reCAPTCHA solved, this callback is often used for automatic form submission.
@@ -150,7 +150,7 @@ export default function StudentLoginPage() {
     }
 
     try {
-      const result = await signInWithPhoneNumber(auth, data.phoneNumber, appVerifier);
+      if(!auth) throw new Error('no auth'); const result = await signInWithPhoneNumber(auth, data.phoneNumber, appVerifier);
       setConfirmationResult(result);
       setPhoneFormStep('code');
       toast({ title: "Verification Code Sent", description: "Please check your phone for the code." });
@@ -184,7 +184,7 @@ export default function StudentLoginPage() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      if(auth) { await signInWithPopup(auth, provider); } else { throw new Error("Auth missing"); }
       toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
       router.push('/student/dashboard');
     } catch (error: any) {

@@ -12,7 +12,7 @@ export async function getStudentProfile(studentId: string): Promise<any | null> 
             console.log("No student ID provided to getStudentProfile.");
             return null;
         }
-        const studentDocRef = doc(db, 'students', studentId);
+        if(!db) return {success: false, message: 'DB error'}; const studentDocRef = doc(db, 'students', studentId);
         const docSnap = await getDoc(studentDocRef);
 
         if (docSnap.exists()) {
@@ -36,7 +36,7 @@ export async function updateStudentProfile(studentId: string, profileData: any):
         if (!studentId) {
              throw new Error("No student ID provided for update.");
         }
-        const studentDocRef = doc(db, 'students', studentId);
+        if(!db) return {success: false, message: 'DB error'}; const studentDocRef = doc(db, 'students', studentId);
         
         // Remove id from data to avoid writing it back to the document
         const { id, ...dataToUpdate } = profileData;

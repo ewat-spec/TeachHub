@@ -8,9 +8,8 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // This action is called by the student portal to submit a question
 // In a real app, this would save to a database.
-export async function submitStudentQuestion(
-  questionData: StudentQuestionInput
-): Promise<{ success: boolean; message?: string }> {
+export async function submitStudentQuestion(questionData: StudentQuestionInput): Promise<{ success: boolean; message?: string }> {
+
   console.log("Server Action: submitStudentQuestion received", questionData);
   await delay(500);
   const newQuestion: StudentQuestion = {

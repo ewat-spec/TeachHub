@@ -16,7 +16,7 @@ export interface StudentData {
 
 export async function getStudents(): Promise<StudentData[]> {
     try {
-        const studentsCol = collection(db, 'students');
+        if (!db) return []; const studentsCol = collection(db, "students");
         const snapshot = await getDocs(studentsCol);
         if (snapshot.empty) {
             return [];
@@ -36,19 +36,20 @@ export async function getStudents(): Promise<StudentData[]> {
 }
 
 export async function saveStudent(studentData: StudentData): Promise<{ success: boolean; message: string; id?: string }> {
+  if (!db) return { success: false, message: "DB error" };
   console.log("Saving student to Firestore:", studentData);
   try {
     const { id, ...dataToSave } = studentData;
 
     if (id) {
       // Update existing document
-      dataToSave.updatedAt = serverTimestamp();
+      (dataToSave as any).updatedAt = serverTimestamp();
       const studentDoc = doc(db, 'students', id);
       await updateDoc(studentDoc, dataToSave);
       return { success: true, message: "Student record updated successfully!", id: id };
     } else {
       // Create new document
-      dataToSave.createdAt = serverTimestamp();
+      (dataToSave as any).createdAt = serverTimestamp();
       const docRef = await addDoc(collection(db, 'students'), dataToSave);
       return { success: true, message: "New student added successfully!", id: docRef.id };
     }
@@ -62,6 +63,7 @@ export async function saveStudent(studentData: StudentData): Promise<{ success: 
 }
 
 export async function deleteStudent(studentId: string): Promise<{ success: boolean; message: string }> {
+  if (!db) return { success: false, message: "DB error" };
   console.log("Deleting student from Firestore:", studentId);
   try {
     if (!studentId) {

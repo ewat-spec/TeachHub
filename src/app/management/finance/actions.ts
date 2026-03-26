@@ -153,8 +153,8 @@ export async function deleteStudent(studentId: string): Promise<{ success: boole
   
   // Remove student and their associated invoices/payments
   mockStudentsData.splice(studentIndex, 1);
-  mockInvoicesData = mockInvoicesData.filter(inv => inv.studentId !== studentId);
-  mockPaymentsData = mockPaymentsData.filter(pay => pay.studentId !== studentId);
+  mockInvoicesData.splice(0, mockInvoicesData.length, ...mockInvoicesData.filter(inv => inv.studentId !== studentId));
+  mockPaymentsData.splice(0, mockPaymentsData.length, ...mockPaymentsData.filter(pay => pay.studentId !== studentId));
   
   return { success: true, message: "Student and all associated financial records deleted successfully." };
 }
