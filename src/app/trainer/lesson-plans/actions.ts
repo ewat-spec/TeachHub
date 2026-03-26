@@ -50,7 +50,7 @@ export async function getAiLessonNotes(input: GenerateLessonNotesInput): Promise
 
 export async function getLessonPlans(): Promise<any[]> {
     try {
-        const lessonPlansCol = collection(db, 'lessonPlans');
+        if(!db) return []; const lessonPlansCol = collection(db, 'lessonPlans');
         const snapshot = await getDocs(lessonPlansCol);
         if (snapshot.empty) {
             return [];
@@ -79,12 +79,12 @@ export async function saveLessonPlan(lessonPlanData: any) {
 
     if (id) {
       dataToSave.updatedAt = serverTimestamp();
-      const lessonPlanDoc = doc(db, 'lessonPlans', id);
+      if(!db) return {success: false, message: 'DB Error'}; const lessonPlanDoc = doc(db, 'lessonPlans', id);
       await updateDoc(lessonPlanDoc, dataToSave);
       return { success: true, message: "Lesson plan updated successfully!", id: id };
     } else {
       dataToSave.createdAt = serverTimestamp();
-      const docRef = await addDoc(collection(db, 'lessonPlans'), dataToSave);
+      if(!db) return {success: false, message: 'DB Error'}; const docRef = await addDoc(collection(db, 'lessonPlans'), dataToSave);
       return { success: true, message: "Lesson plan saved successfully!", id: docRef.id };
     }
   } catch (error) {
@@ -97,6 +97,7 @@ export async function saveLessonPlan(lessonPlanData: any) {
 }
 
 export async function deleteLessonPlan(lessonPlanId: string) {
+  if(!db) return {success: false, message: 'DB Error'};
   console.log("Deleting lesson plan from Firestore:", lessonPlanId);
   try {
     if (!lessonPlanId) {

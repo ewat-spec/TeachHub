@@ -260,7 +260,7 @@ const generateLessonNotesFlow = ai.defineFlow(
   async input => {
     const processedInput = {
         ...input,
-        keyPoints: input.keyPoints?.filter(kp => kp.trim() !== "").length > 0 ? input.keyPoints.filter(kp => kp.trim() !== "") : undefined,
+        keyPoints: (input.keyPoints || []).filter(kp => kp.trim() !== "").length > 0 ? (input.keyPoints || []).filter(kp => kp.trim() !== "") : undefined,
         studentAudience: input.studentAudience?.trim() ? input.studentAudience.trim() : "a general technical audience (e.g., first-year college students or vocational trainees)",
         languageOutputStyle: input.languageOutputStyle || 'standard',
         isCbcCurriculum: input.isCbcCurriculum || false,

@@ -21,7 +21,15 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    if (!auth) {
+        // Mock auth if firebase is not initialized
+        console.warn("Firebase Auth not initialized. Using mock user.");
+        setUser({ uid: "mock-student", email: "mock@student.com" });
+        setLoading(false);
+        return;
+    }
+
+    if(!auth) return; const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
       } else {
@@ -37,8 +45,12 @@ export default function StudentAppLayout({ children }: { children: ReactNode }) 
   }, [router, pathname]);
 
   const handleLogout = async () => {
+    if (!auth) {
+        router.push('/student/login');
+        return;
+    }
     try {
-      await signOut(auth);
+      if(auth) { await signOut(auth); }
       toast({ title: "Logged Out", description: "You have been successfully signed out." });
       router.push('/student/login'); 
     } catch (error) {

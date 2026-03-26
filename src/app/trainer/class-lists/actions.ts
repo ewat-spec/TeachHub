@@ -8,7 +8,7 @@ const CURRENT_TRAINER_ID = "trainerJane";
 
 export async function getTrainerCourses(): Promise<Course[]> {
   try {
-    const coursesCol = collection(db, 'courses');
+    if(!db) return []; const coursesCol = collection(db, 'courses');
     const q = query(coursesCol, where("trainerId", "==", CURRENT_TRAINER_ID));
     const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
@@ -23,7 +23,7 @@ export async function getMarksheetData(courseId: string): Promise<Marksheet | nu
     if (!courseId) return null;
 
     try {
-        const courseDoc = await getDoc(doc(db, 'courses', courseId));
+        if(!db) throw new Error('DB Error'); const courseDoc = await getDoc(doc(db, 'courses', courseId));
         if (!courseDoc.exists()) throw new Error("Course not found");
         const course = { id: courseDoc.id, ...courseDoc.data() } as Course;
         
@@ -76,7 +76,7 @@ export async function saveMarks(
   entries: { studentId: string; assessmentId: string; mark: number | null; comments: string }[],
   totalMarksMap: Record<string, number>
 ): Promise<{ success: boolean; message: string; errors: { studentId: string; assessmentId: string; message: string }[] }> {
-    const batch = writeBatch(db);
+    if(!db) throw new Error('DB Error'); const batch = writeBatch(db);
     const errors: { studentId: string; assessmentId: string; message: string }[] = [];
     let validEntriesCount = 0;
 
@@ -130,7 +130,7 @@ export async function updateCourseResources(courseId: string, resources: CourseR
     // Firestore works best with plain objects, so convert any class instances if necessary (though our interface is fine).
     const resourcesToSave = resources.map(r => ({...r}));
 
-    const courseDoc = doc(db, 'courses', courseId);
+    if(!db) throw new Error('DB Error'); const courseDoc = doc(db, 'courses', courseId);
     await updateDoc(courseDoc, { resources: resourcesToSave });
 
     return { success: true, message: "Course resources updated successfully." };

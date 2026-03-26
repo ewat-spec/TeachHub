@@ -172,7 +172,7 @@ export default function StudentRegistryPage() {
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="hover:text-destructive"><Trash2 className="h-4 w-4"/><span className="sr-only">Delete</span></Button></AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the student record for {student.fullName}.</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(student.id!)}>Yes, delete</AlertDialogAction></AlertDialogFooter>
+                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteStudent(student.id!)}>Yes, delete</AlertDialogAction></AlertDialogFooter>
                           </AlertDialogContent>
                        </AlertDialog>
                     </TableCell>

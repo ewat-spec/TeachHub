@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const WolframAlphaQueryInputSchema = z.object({
-  query: z.string().describe('The query to send to Wolfram Alpha (e.g., "derivative of x^3 * sin(x)", "plot sin(x) from -pi to pi", "integrate 1/(x^2+1) dx from 0 to 1").'),
+  query: z.string().max(250, "Query is too long").describe('The query to send to Wolfram Alpha (e.g., "derivative of x^3 * sin(x)", "plot sin(x) from -pi to pi", "integrate 1/(x^2+1) dx from 0 to 1").'),
 });
 type WolframAlphaQueryInput = z.infer<typeof WolframAlphaQueryInputSchema>;
 

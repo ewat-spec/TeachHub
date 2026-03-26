@@ -52,6 +52,7 @@ interface MockCourse {
 }
 
 const mockCourses: MockCourse[] = [
+  { id: "unit-design", title: "Engineering Design Studio", code: "ENG301", poeProgress: 15, credits: 20, teacher: "AI Assistant", poeStatus: "Active", image: "https://placehold.co/600x400.png?text=Design+Studio", imageHint: "engineering design blueprint", poeDueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() },
   { id: "unit1", title: "Engine Systems", code: "AUT201", poeProgress: 75, credits: 15, teacher: "Mr. Harrison", poeStatus: "Partially Submitted", image: "https://placehold.co/600x400.png", imageHint: "engine mechanics repair", poeDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() },
   { id: "unit2", title: "Vehicle Electrical Systems", code: "AUT202", poeProgress: 40, credits: 12, teacher: "Ms. Electra", poeStatus: "Pending Submission", image: "https://placehold.co/600x400.png", imageHint: "car electrics circuitry", poeDueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString() },
   { id: "unit3", title: "Workshop Safety & Practice", code: "AUT203", poeProgress: 100, credits: 10, teacher: "Mr. Safety", poeStatus: "Completed & Verified", image: "https://placehold.co/600x400.png", imageHint: "workshop safety gear", poeDueDate: null },
@@ -71,7 +72,7 @@ interface MockAnnouncement {
 const mockAnnouncements: MockAnnouncement[] = [
     {id: "ann1", title: "Practical Assessment: Engine Systems (AUT201)", date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), content: "The practical assessment for AUT201 is next week. Ensure all pre-assessment tasks are completed.", type: "alert", dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()},
     {id: "ann2", title: "Guest Lecture: EV Technology", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), content: "Join us for an insightful guest lecture on Electric Vehicle advancements this Friday.", type: "info", dueDate: null},
-    {id: "ann3", title: "Reminder: PoE Submission for AUT202", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), content: `PoE for Vehicle Electrical Systems is due on ${format(parseISO(mockCourses.find(c => c.id === 'unit2')?.poeDueDate || new Date()), "MMM dd")}.`, type: "reminder", dueDate: mockCourses.find(c => c.id === 'unit2')?.poeDueDate},
+    {id: "ann3", title: "Reminder: PoE Submission for AUT202", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), content: `PoE for Vehicle Electrical Systems is due on ${format(parseISO((mockCourses.find(c => c.id === "unit2")?.poeDueDate || new Date().toISOString()) as string), "MMM dd")}.`, type: "reminder", dueDate: mockCourses.find(c => c.id === 'unit2')?.poeDueDate},
 ];
 
 const aiQuestionFormSchema = z.object({
@@ -183,7 +184,7 @@ export default function StudentDashboardPage() {
   const upcomingDeadlines = useMemo(() => {
     if (!isClient) return [];
     const today = new Date();
-    const items = [];
+    const items: any[] = [];
 
     // PoE Deadlines from courses
     mockCourses.forEach(course => {
@@ -448,7 +449,7 @@ export default function StudentDashboardPage() {
              <Button variant="link" className="text-sm">View All Courses &rarr;</Button>
         </div>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
-          {mockCourses.slice(0,2).map((course) => ( // Show only first 2 for brevity on dashboard
+          {mockCourses.slice(0,3).map((course) => ( // Show first 3 for brevity
             <Card key={course.id} className="shadow-lg hover:shadow-primary/20 transition-shadow duration-300 flex flex-col bg-card">
               <div className="relative h-48 w-full">
                 <Image 
@@ -490,20 +491,30 @@ export default function StudentDashboardPage() {
                 </div>
               </CardContent>
               <CardFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => handlePoeAction(course.title, "view")} className="sm:col-span-1">
-                  <Eye className="mr-2 h-4 w-4" /> View PoE
-                </Button>
-                <Button variant="default" size="sm" onClick={() => handlePoeAction(course.title, "upload")} disabled={course.poeProgress === 100} className="sm:col-span-1">
-                  <UploadCloud className="mr-2 h-4 w-4" /> Upload
-                </Button>
-                 <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={() => handleOpenTrainerQuestionModal({id: course.id, title: course.title})}
-                    className="sm:col-span-1"
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" /> Ask Trainer
-                </Button>
+                {course.id === 'unit-design' ? (
+                     <Button variant="default" size="sm" asChild className="sm:col-span-3 bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 text-white border-0">
+                        <Link href="/student/engineering-design">
+                            <SkillsSparkles className="mr-2 h-4 w-4" /> Launch Design Studio
+                        </Link>
+                     </Button>
+                ) : (
+                    <>
+                        <Button variant="outline" size="sm" onClick={() => handlePoeAction(course.title, "view")} className="sm:col-span-1">
+                        <Eye className="mr-2 h-4 w-4" /> View PoE
+                        </Button>
+                        <Button variant="default" size="sm" onClick={() => handlePoeAction(course.title, "upload")} disabled={course.poeProgress === 100} className="sm:col-span-1">
+                        <UploadCloud className="mr-2 h-4 w-4" /> Upload
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleOpenTrainerQuestionModal({id: course.id, title: course.title})}
+                            className="sm:col-span-1"
+                        >
+                        <MessageCircle className="mr-2 h-4 w-4" /> Ask Trainer
+                        </Button>
+                    </>
+                )}
               </CardFooter>
             </Card>
           ))}

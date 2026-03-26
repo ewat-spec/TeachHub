@@ -1,16 +1,14 @@
-
 'use server';
 /**
- * @fileOverview A Genkit tool for performing Monte Carlo simulations.
- *
- * - runMonteCarloIntegration - A tool to estimate the definite integral (area under a curve) of a function.
+ * @fileOverview A Genkit tool for performing Monte Carlo simulations safely.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { compile, EvalFunction } from 'mathjs';
 
 const MonteCarloIntegrationInputSchema = z.object({
-  functionBody: z.string().describe('The body of the JavaScript function to integrate, e.g., "x*x", "Math.sin(x)". The function will be evaluated as `new Function(\'x\', \'return \' + functionBody)`.'),
+  functionBody: z.string().describe('The body of the mathematical expression to integrate, e.g., "x*x", "sin(x)". Uses mathjs syntax.'),
   xMin: z.number().describe('The lower bound of the integration range (e.g., 0).'),
   xMax: z.number().describe('The upper bound of the integration range (e.g., 1).'),
   simulations: z.number().min(1000).max(1000000).optional().default(100000).describe('The number of simulation points to use. Defaults to 100,000.'),
@@ -24,10 +22,6 @@ const MonteCarloIntegrationOutputSchema = z.object({
 });
 type MonteCarloIntegrationOutput = z.infer<typeof MonteCarloIntegrationOutputSchema>;
 
-
-/**
- * A Genkit tool to estimate the area under a curve (definite integral) using a Monte Carlo simulation.
- */
 export const runMonteCarloIntegration = ai.defineTool(
   {
     name: 'runMonteCarloIntegration',
@@ -38,35 +32,29 @@ export const runMonteCarloIntegration = ai.defineTool(
   async (input: MonteCarloIntegrationInput): Promise<MonteCarloIntegrationOutput> => {
     const { functionBody, xMin, xMax, simulations } = input;
 
-    let fn: (x: number) => number;
+    let fn: EvalFunction;
     try {
-        // Create a function from the string body. This is safer than direct eval().
-        fn = new Function('x', `return ${functionBody}`) as (x: number) => number;
+        fn = compile(functionBody);
     } catch (error: any) {
         throw new Error(`Invalid function body provided: "${functionBody}". Error: ${error.message}`);
     }
 
-    // To set the bounding box, we need to find the approximate max value of the function in the range.
-    // We can do this by sampling some points.
     let yMax = -Infinity;
     const samplePoints = 1000;
     for (let i = 0; i < samplePoints; i++) {
         const x = xMin + (xMax - xMin) * (i / (samplePoints - 1));
-        const y = fn(x);
+        const y = fn.evaluate({x: x});
         if (isFinite(y) && y > yMax) {
             yMax = y;
         }
     }
 
-    // If the function is constant and negative, yMax might still be -Infinity. Let's handle this.
-    // Also, add a small buffer.
     if (!isFinite(yMax)) {
-        const testVal = fn(xMin);
+        const testVal = fn.evaluate({x: xMin});
         if (!isFinite(testVal)) throw new Error(`Function returned non-finite value at x=${xMin}. Cannot determine bounds.`);
         yMax = testVal;
     }
-     yMax = Math.max(yMax, 0) * 1.1; // Ensure yMax is at least 0 and add a 10% buffer.
-
+     yMax = Math.max(yMax, 0) * 1.1;
 
     let pointsUnderCurve = 0;
     const xRange = xMax - xMin;
@@ -74,9 +62,7 @@ export const runMonteCarloIntegration = ai.defineTool(
     for (let i = 0; i < simulations; i++) {
         const randomX = xMin + Math.random() * xRange;
         const randomY = Math.random() * yMax;
-        
-        const functionY = fn(randomX);
-
+        const functionY = fn.evaluate({x: randomX});
         if (randomY < functionY) {
             pointsUnderCurve++;
         }
